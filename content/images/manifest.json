@@ -1,0 +1,470 @@
+[
+  {
+    "imageId": "cubeio-oll-01-v1",
+    "caseId": "oll-01",
+    "file": "cubeio-oll-01-v1.svg",
+    "signature": "OLL:1212:1111"
+  },
+  {
+    "imageId": "cubeio-oll-02-v1",
+    "caseId": "oll-02",
+    "file": "cubeio-oll-02-v1.svg",
+    "signature": "OLL:1122:1111"
+  },
+  {
+    "imageId": "cubeio-oll-03-v1",
+    "caseId": "oll-03",
+    "file": "cubeio-oll-03-v1.svg",
+    "signature": "OLL:0222:1111"
+  },
+  {
+    "imageId": "cubeio-oll-04-v1",
+    "caseId": "oll-04",
+    "file": "cubeio-oll-04-v1.svg",
+    "signature": "OLL:0111:1111"
+  },
+  {
+    "imageId": "cubeio-oll-05-v1",
+    "caseId": "oll-05",
+    "file": "cubeio-oll-05-v1.svg",
+    "signature": "OLL:0222:0011"
+  },
+  {
+    "imageId": "cubeio-oll-06-v1",
+    "caseId": "oll-06",
+    "file": "cubeio-oll-06-v1.svg",
+    "signature": "OLL:0111:0011"
+  },
+  {
+    "imageId": "cubeio-oll-07-v1",
+    "caseId": "oll-07",
+    "file": "cubeio-oll-07-v1.svg",
+    "signature": "OLL:0222:1001"
+  },
+  {
+    "imageId": "cubeio-oll-08-v1",
+    "caseId": "oll-08",
+    "file": "cubeio-oll-08-v1.svg",
+    "signature": "OLL:0111:0110"
+  },
+  {
+    "imageId": "cubeio-oll-09-v1",
+    "caseId": "oll-09",
+    "file": "cubeio-oll-09-v1.svg",
+    "signature": "OLL:0111:1100"
+  },
+  {
+    "imageId": "cubeio-oll-10-v1",
+    "caseId": "oll-10",
+    "file": "cubeio-oll-10-v1.svg",
+    "signature": "OLL:0222:1100"
+  },
+  {
+    "imageId": "cubeio-oll-11-v1",
+    "caseId": "oll-11",
+    "file": "cubeio-oll-11-v1.svg",
+    "signature": "OLL:0222:0110"
+  },
+  {
+    "imageId": "cubeio-oll-12-v1",
+    "caseId": "oll-12",
+    "file": "cubeio-oll-12-v1.svg",
+    "signature": "OLL:0111:1001"
+  },
+  {
+    "imageId": "cubeio-oll-13-v1",
+    "caseId": "oll-13",
+    "file": "cubeio-oll-13-v1.svg",
+    "signature": "OLL:0222:1010"
+  },
+  {
+    "imageId": "cubeio-oll-14-v1",
+    "caseId": "oll-14",
+    "file": "cubeio-oll-14-v1.svg",
+    "signature": "OLL:0111:0101"
+  },
+  {
+    "imageId": "cubeio-oll-15-v1",
+    "caseId": "oll-15",
+    "file": "cubeio-oll-15-v1.svg",
+    "signature": "OLL:0222:0101"
+  },
+  {
+    "imageId": "cubeio-oll-16-v1",
+    "caseId": "oll-16",
+    "file": "cubeio-oll-16-v1.svg",
+    "signature": "OLL:0111:1010"
+  },
+  {
+    "imageId": "cubeio-oll-17-v1",
+    "caseId": "oll-17",
+    "file": "cubeio-oll-17-v1.svg",
+    "signature": "OLL:0102:1111"
+  },
+  {
+    "imageId": "cubeio-oll-18-v1",
+    "caseId": "oll-18",
+    "file": "cubeio-oll-18-v1.svg",
+    "signature": "OLL:0021:1111"
+  },
+  {
+    "imageId": "cubeio-oll-19-v1",
+    "caseId": "oll-19",
+    "file": "cubeio-oll-19-v1.svg",
+    "signature": "OLL:0012:1111"
+  },
+  {
+    "imageId": "cubeio-oll-20-v1",
+    "caseId": "oll-20",
+    "file": "cubeio-oll-20-v1.svg",
+    "signature": "OLL:0000:1111"
+  },
+  {
+    "imageId": "cubeio-oll-21-v1",
+    "caseId": "oll-21",
+    "file": "cubeio-oll-21-v1.svg",
+    "signature": "OLL:1212:0000"
+  },
+  {
+    "imageId": "cubeio-oll-22-v1",
+    "caseId": "oll-22",
+    "file": "cubeio-oll-22-v1.svg",
+    "signature": "OLL:1122:0000"
+  },
+  {
+    "imageId": "cubeio-oll-23-v1",
+    "caseId": "oll-23",
+    "file": "cubeio-oll-23-v1.svg",
+    "signature": "OLL:0021:0000"
+  },
+  {
+    "imageId": "cubeio-oll-24-v1",
+    "caseId": "oll-24",
+    "file": "cubeio-oll-24-v1.svg",
+    "signature": "OLL:0012:0000"
+  },
+  {
+    "imageId": "cubeio-oll-25-v1",
+    "caseId": "oll-25",
+    "file": "cubeio-oll-25-v1.svg",
+    "signature": "OLL:0102:0000"
+  },
+  {
+    "imageId": "cubeio-oll-26-v1",
+    "caseId": "oll-26",
+    "file": "cubeio-oll-26-v1.svg",
+    "signature": "OLL:0111:0000"
+  },
+  {
+    "imageId": "cubeio-oll-27-v1",
+    "caseId": "oll-27",
+    "file": "cubeio-oll-27-v1.svg",
+    "signature": "OLL:0222:0000"
+  },
+  {
+    "imageId": "cubeio-oll-28-v1",
+    "caseId": "oll-28",
+    "file": "cubeio-oll-28-v1.svg",
+    "signature": "OLL:0000:0011"
+  },
+  {
+    "imageId": "cubeio-oll-29-v1",
+    "caseId": "oll-29",
+    "file": "cubeio-oll-29-v1.svg",
+    "signature": "OLL:0012:0110"
+  },
+  {
+    "imageId": "cubeio-oll-30-v1",
+    "caseId": "oll-30",
+    "file": "cubeio-oll-30-v1.svg",
+    "signature": "OLL:0012:1100"
+  },
+  {
+    "imageId": "cubeio-oll-31-v1",
+    "caseId": "oll-31",
+    "file": "cubeio-oll-31-v1.svg",
+    "signature": "OLL:0012:0011"
+  },
+  {
+    "imageId": "cubeio-oll-32-v1",
+    "caseId": "oll-32",
+    "file": "cubeio-oll-32-v1.svg",
+    "signature": "OLL:0012:1001"
+  },
+  {
+    "imageId": "cubeio-oll-33-v1",
+    "caseId": "oll-33",
+    "file": "cubeio-oll-33-v1.svg",
+    "signature": "OLL:0012:1010"
+  },
+  {
+    "imageId": "cubeio-oll-34-v1",
+    "caseId": "oll-34",
+    "file": "cubeio-oll-34-v1.svg",
+    "signature": "OLL:0012:0101"
+  },
+  {
+    "imageId": "cubeio-oll-35-v1",
+    "caseId": "oll-35",
+    "file": "cubeio-oll-35-v1.svg",
+    "signature": "OLL:0102:0011"
+  },
+  {
+    "imageId": "cubeio-oll-36-v1",
+    "caseId": "oll-36",
+    "file": "cubeio-oll-36-v1.svg",
+    "signature": "OLL:0102:1001"
+  },
+  {
+    "imageId": "cubeio-oll-37-v1",
+    "caseId": "oll-37",
+    "file": "cubeio-oll-37-v1.svg",
+    "signature": "OLL:0102:1100"
+  },
+  {
+    "imageId": "cubeio-oll-38-v1",
+    "caseId": "oll-38",
+    "file": "cubeio-oll-38-v1.svg",
+    "signature": "OLL:0102:0110"
+  },
+  {
+    "imageId": "cubeio-oll-39-v1",
+    "caseId": "oll-39",
+    "file": "cubeio-oll-39-v1.svg",
+    "signature": "OLL:0102:1010"
+  },
+  {
+    "imageId": "cubeio-oll-40-v1",
+    "caseId": "oll-40",
+    "file": "cubeio-oll-40-v1.svg",
+    "signature": "OLL:0102:0101"
+  },
+  {
+    "imageId": "cubeio-oll-41-v1",
+    "caseId": "oll-41",
+    "file": "cubeio-oll-41-v1.svg",
+    "signature": "OLL:0021:1100"
+  },
+  {
+    "imageId": "cubeio-oll-42-v1",
+    "caseId": "oll-42",
+    "file": "cubeio-oll-42-v1.svg",
+    "signature": "OLL:0021:0110"
+  },
+  {
+    "imageId": "cubeio-oll-43-v1",
+    "caseId": "oll-43",
+    "file": "cubeio-oll-43-v1.svg",
+    "signature": "OLL:0021:0011"
+  },
+  {
+    "imageId": "cubeio-oll-44-v1",
+    "caseId": "oll-44",
+    "file": "cubeio-oll-44-v1.svg",
+    "signature": "OLL:0021:1001"
+  },
+  {
+    "imageId": "cubeio-oll-45-v1",
+    "caseId": "oll-45",
+    "file": "cubeio-oll-45-v1.svg",
+    "signature": "OLL:0021:1010"
+  },
+  {
+    "imageId": "cubeio-oll-46-v1",
+    "caseId": "oll-46",
+    "file": "cubeio-oll-46-v1.svg",
+    "signature": "OLL:0021:0101"
+  },
+  {
+    "imageId": "cubeio-oll-47-v1",
+    "caseId": "oll-47",
+    "file": "cubeio-oll-47-v1.svg",
+    "signature": "OLL:1122:0110"
+  },
+  {
+    "imageId": "cubeio-oll-48-v1",
+    "caseId": "oll-48",
+    "file": "cubeio-oll-48-v1.svg",
+    "signature": "OLL:1122:0011"
+  },
+  {
+    "imageId": "cubeio-oll-49-v1",
+    "caseId": "oll-49",
+    "file": "cubeio-oll-49-v1.svg",
+    "signature": "OLL:1122:1001"
+  },
+  {
+    "imageId": "cubeio-oll-50-v1",
+    "caseId": "oll-50",
+    "file": "cubeio-oll-50-v1.svg",
+    "signature": "OLL:1122:1100"
+  },
+  {
+    "imageId": "cubeio-oll-51-v1",
+    "caseId": "oll-51",
+    "file": "cubeio-oll-51-v1.svg",
+    "signature": "OLL:1122:0101"
+  },
+  {
+    "imageId": "cubeio-oll-52-v1",
+    "caseId": "oll-52",
+    "file": "cubeio-oll-52-v1.svg",
+    "signature": "OLL:1122:1010"
+  },
+  {
+    "imageId": "cubeio-oll-53-v1",
+    "caseId": "oll-53",
+    "file": "cubeio-oll-53-v1.svg",
+    "signature": "OLL:1212:0011"
+  },
+  {
+    "imageId": "cubeio-oll-54-v1",
+    "caseId": "oll-54",
+    "file": "cubeio-oll-54-v1.svg",
+    "signature": "OLL:1212:0110"
+  },
+  {
+    "imageId": "cubeio-oll-55-v1",
+    "caseId": "oll-55",
+    "file": "cubeio-oll-55-v1.svg",
+    "signature": "OLL:1212:1010"
+  },
+  {
+    "imageId": "cubeio-oll-56-v1",
+    "caseId": "oll-56",
+    "file": "cubeio-oll-56-v1.svg",
+    "signature": "OLL:1212:0101"
+  },
+  {
+    "imageId": "cubeio-oll-57-v1",
+    "caseId": "oll-57",
+    "file": "cubeio-oll-57-v1.svg",
+    "signature": "OLL:0000:0101"
+  },
+  {
+    "imageId": "cubeio-pll-aa-v1",
+    "caseId": "pll-aa",
+    "file": "cubeio-pll-aa-v1.svg",
+    "signature": "PLL:0132:3012"
+  },
+  {
+    "imageId": "cubeio-pll-ab-v1",
+    "caseId": "pll-ab",
+    "file": "cubeio-pll-ab-v1.svg",
+    "signature": "PLL:0132:1230"
+  },
+  {
+    "imageId": "cubeio-pll-e-v1",
+    "caseId": "pll-e",
+    "file": "cubeio-pll-e-v1.svg",
+    "signature": "PLL:0321:1230"
+  },
+  {
+    "imageId": "cubeio-pll-f-v1",
+    "caseId": "pll-f",
+    "file": "cubeio-pll-f-v1.svg",
+    "signature": "PLL:0132:2103"
+  },
+  {
+    "imageId": "cubeio-pll-ga-v1",
+    "caseId": "pll-ga",
+    "file": "cubeio-pll-ga-v1.svg",
+    "signature": "PLL:0132:3201"
+  },
+  {
+    "imageId": "cubeio-pll-gb-v1",
+    "caseId": "pll-gb",
+    "file": "cubeio-pll-gb-v1.svg",
+    "signature": "PLL:0132:2310"
+  },
+  {
+    "imageId": "cubeio-pll-gc-v1",
+    "caseId": "pll-gc",
+    "file": "cubeio-pll-gc-v1.svg",
+    "signature": "PLL:0132:2031"
+  },
+  {
+    "imageId": "cubeio-pll-gd-v1",
+    "caseId": "pll-gd",
+    "file": "cubeio-pll-gd-v1.svg",
+    "signature": "PLL:0132:1302"
+  },
+  {
+    "imageId": "cubeio-pll-h-v1",
+    "caseId": "pll-h",
+    "file": "cubeio-pll-h-v1.svg",
+    "signature": "PLL:0123:2301"
+  },
+  {
+    "imageId": "cubeio-pll-ja-v1",
+    "caseId": "pll-ja",
+    "file": "cubeio-pll-ja-v1.svg",
+    "signature": "PLL:0132:0132"
+  },
+  {
+    "imageId": "cubeio-pll-jb-v1",
+    "caseId": "pll-jb",
+    "file": "cubeio-pll-jb-v1.svg",
+    "signature": "PLL:0132:3120"
+  },
+  {
+    "imageId": "cubeio-pll-na-v1",
+    "caseId": "pll-na",
+    "file": "cubeio-pll-na-v1.svg",
+    "signature": "PLL:0321:2103"
+  },
+  {
+    "imageId": "cubeio-pll-nb-v1",
+    "caseId": "pll-nb",
+    "file": "cubeio-pll-nb-v1.svg",
+    "signature": "PLL:0321:0321"
+  },
+  {
+    "imageId": "cubeio-pll-ra-v1",
+    "caseId": "pll-ra",
+    "file": "cubeio-pll-ra-v1.svg",
+    "signature": "PLL:0132:0213"
+  },
+  {
+    "imageId": "cubeio-pll-rb-v1",
+    "caseId": "pll-rb",
+    "file": "cubeio-pll-rb-v1.svg",
+    "signature": "PLL:0132:1023"
+  },
+  {
+    "imageId": "cubeio-pll-t-v1",
+    "caseId": "pll-t",
+    "file": "cubeio-pll-t-v1.svg",
+    "signature": "PLL:0132:0321"
+  },
+  {
+    "imageId": "cubeio-pll-ua-v1",
+    "caseId": "pll-ua",
+    "file": "cubeio-pll-ua-v1.svg",
+    "signature": "PLL:0123:0312"
+  },
+  {
+    "imageId": "cubeio-pll-ub-v1",
+    "caseId": "pll-ub",
+    "file": "cubeio-pll-ub-v1.svg",
+    "signature": "PLL:0123:0231"
+  },
+  {
+    "imageId": "cubeio-pll-v-v1",
+    "caseId": "pll-v",
+    "file": "cubeio-pll-v-v1.svg",
+    "signature": "PLL:0321:0132"
+  },
+  {
+    "imageId": "cubeio-pll-y-v1",
+    "caseId": "pll-y",
+    "file": "cubeio-pll-y-v1.svg",
+    "signature": "PLL:0321:0213"
+  },
+  {
+    "imageId": "cubeio-pll-z-v1",
+    "caseId": "pll-z",
+    "file": "cubeio-pll-z-v1.svg",
+    "signature": "PLL:0123:1032"
+  }
+]

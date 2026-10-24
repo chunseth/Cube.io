@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="cubeio-pll-f-v1" width="192" height="192" viewBox="0 0 192 192">
+<rect x="1" y="1" width="190" height="190" rx="22" fill="#101b2a" stroke="#304257"/>
+<rect data-facelet="0" x="48" y="48" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="1" x="81" y="48" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="2" x="114" y="48" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="3" x="48" y="81" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="4" x="81" y="81" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="5" x="114" y="81" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="6" x="48" y="114" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="7" x="81" y="114" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="8" x="114" y="114" width="30" height="30" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="47" x="48" y="26" width="30" height="16" rx="3" fill="#74b5ff" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="46" x="81" y="26" width="30" height="16" rx="3" fill="#5bd3aa" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="45" x="114" y="26" width="30" height="16" rx="3" fill="#f3a45c" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="36" x="26" y="48" width="16" height="30" rx="3" fill="#f27c8b" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="37" x="26" y="81" width="16" height="30" rx="3" fill="#f27c8b" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="38" x="26" y="114" width="16" height="30" rx="3" fill="#f27c8b" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="11" x="150" y="48" width="16" height="30" rx="3" fill="#5bd3aa" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="10" x="150" y="81" width="16" height="30" rx="3" fill="#f3a45c" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="9" x="150" y="114" width="16" height="30" rx="3" fill="#74b5ff" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="18" x="48" y="150" width="30" height="16" rx="3" fill="#5bd3aa" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="19" x="81" y="150" width="30" height="16" rx="3" fill="#74b5ff" stroke="#0b1420" stroke-width="1.2"/>
+<rect data-facelet="20" x="114" y="150" width="30" height="16" rx="3" fill="#f3a45c" stroke="#0b1420" stroke-width="1.2"/>
+<text x="96" y="17" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#74b5ff">B</text>
+<text x="96" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#5bd3aa">F</text>
+<text x="14" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#f27c8b">L</text>
+<text x="178" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#f3a45c">R</text>
+<text x="96" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#473b17">U</text>
+</svg>

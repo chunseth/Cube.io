@@ -1,0 +1,30 @@
+[
+  {
+    "source": "jperm",
+    "type": "OLL",
+    "url": "https://jperm.net/lib/oll.js?v=20190924-1156",
+    "retrieved": "2026-10-24",
+    "sha256": "d893a359ccbbf66d808469414302933317393bf18b9cfb848f6f126a3c09b3f0"
+  },
+  {
+    "source": "speedcubedb",
+    "type": "OLL",
+    "url": "https://speedcubedb.com/a/3x3/OLL",
+    "retrieved": "2026-10-24",
+    "sha256": "5fae8e9f9ad332c0654f9644d047cfbdb2d5628fc597d91cd3f01033d04359c2"
+  },
+  {
+    "source": "jperm",
+    "type": "PLL",
+    "url": "https://jperm.net/lib/pll.js?v=20190924-1156",
+    "retrieved": "2026-10-24",
+    "sha256": "c455bd663c80a96ad8d1604aceac8c421000203191c2518060c1ba21e6a10689"
+  },
+  {
+    "source": "speedcubedb",
+    "type": "PLL",
+    "url": "https://speedcubedb.com/a/3x3/PLL",
+    "retrieved": "2026-10-24",
+    "sha256": "231c07f8f0d19b350a7c9a6121b6524cf0df2223d5cfe05129a21a2ef227e72e"
+  }
+]

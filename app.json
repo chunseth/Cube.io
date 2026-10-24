@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Cube.io",
+    "slug": "cube-io",
+    "scheme": "cubeio",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router", "expo-sqlite"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.cubeio.trainer"
+    },
+    "backgroundColor": "#0c1420"
+  }
+}
