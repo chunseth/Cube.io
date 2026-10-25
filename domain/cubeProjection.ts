@@ -79,7 +79,7 @@ export function projectCube(state: string, yawDegrees: number) {
   return stickers.sort((a, b) => a.depth - b.depth);
 }
 
-// Fixed UFR quiz: F2L is an unsegmented, null surface with no sticker colors.
+// Fixed UFR quiz: F2L cubies retain their outlines without revealing colors.
 function projectLastLayerQuestion(state: string, orientationOnly: boolean) {
   const palette: Record<string, string> = {
     U: "#ffda67",
@@ -110,7 +110,10 @@ function projectLastLayerQuestion(state: string, orientationOnly: boolean) {
           : "#344458"
         : palette[s.color],
     }));
-  return { surfaces, stickers };
+  const f2l = projected
+    .filter((s) => s.face !== 0 && s.id % 9 >= 3)
+    .map(({ id, face, points }) => ({ id, face, points }));
+  return { surfaces, stickers, f2l };
 }
 
 export function projectOllQuestion(state: string) {
@@ -120,12 +123,13 @@ export function projectPllQuestion(state: string) {
   return projectLastLayerQuestion(state, false);
 }
 function lastLayerQuestionSVG(state: string, orientationOnly: boolean): string {
-  const { surfaces, stickers } = projectLastLayerQuestion(
+  const { surfaces, stickers, f2l } = projectLastLayerQuestion(
     state,
     orientationOnly,
   );
   return `<svg xmlns="http://www.w3.org/2000/svg" width="290" height="250" viewBox="-145 -120 290 250">
 ${surfaces.map((s) => `<polygon data-null-f2l="${s.face}" points="${s.points}" fill="#152131" stroke="#293c51" stroke-width="2.5" stroke-linejoin="round"/>`).join("\n")}
+${f2l.map((s) => `<polygon data-f2l-cubie="${s.id}" points="${s.points}" fill="#152131" stroke="#3d526a" stroke-width="2.5" stroke-linejoin="round"/>`).join("\n")}
 ${stickers.map((s) => `<polygon data-facelet="${s.id}" points="${s.points}" fill="${s.color}" stroke="#0c1420" stroke-width="2.5" stroke-linejoin="round"/>`).join("\n")}
 </svg>`;
 }
@@ -134,4 +138,21 @@ export function ollQuestionSVG(state: string): string {
 }
 export function pllQuestionSVG(state: string): string {
   return lastLayerQuestionSVG(state, false);
+}
+
+// Four-sided recognition keeps yellow up while the viewer turns around the cube.
+export function projectRecognitionCube(
+  state: string,
+  yawDegrees: number,
+  oll: boolean,
+) {
+  return projectCube(state, yawDegrees).map((sticker) => ({
+    ...sticker,
+    displayColor:
+      sticker.face !== 0 && sticker.id % 9 >= 3
+        ? "null"
+        : oll && sticker.color !== "U"
+          ? "null"
+          : sticker.color,
+  }));
 }

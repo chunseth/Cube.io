@@ -8,16 +8,22 @@ module.exports = function loadDomain(file) {
     "../domain",
     file + ".ts",
   );
-  const output = ts.transpileModule(fs.readFileSync(filename, "utf8"), {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      esModuleInterop: true,
-    },
-  });
-  const mod = new Module(filename, module);
-  mod.filename = filename;
-  mod.paths = Module._nodeModulePaths(require("node:path").dirname(filename));
-  mod._compile(output.outputText, filename);
-  return mod.exports;
+  const previous = Module._extensions[".ts"];
+  Module._extensions[".ts"] = (mod, sourcePath) => {
+    const output = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2020,
+        esModuleInterop: true,
+      },
+    });
+    mod._compile(output.outputText, sourcePath);
+  };
+  try {
+    delete require.cache[filename];
+    return require(filename);
+  } finally {
+    if (previous) Module._extensions[".ts"] = previous;
+    else delete Module._extensions[".ts"];
+  }
 };

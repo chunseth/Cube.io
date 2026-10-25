@@ -80,7 +80,7 @@ test("manual time parser and display handle minutes and reject malformed input",
   assert.equal(formatTime(Infinity), "DNF");
 });
 test("inspection boundaries and hold requirement", () => {
-  assert.equal(HOLD_MS, 550);
+  assert.equal(HOLD_MS, 500);
   assert.equal(inspectionPenalty(14999.9), "none");
   assert.equal(inspectionPenalty(15000), "+2");
   assert.equal(inspectionPenalty(16999.9), "+2");
@@ -92,17 +92,20 @@ test("best possible average and best single handle DNFs", () => {
   assert.equal(best([s(1, "DNF"), s(12, "+2")]), 14000);
   assert.equal(best([s(1, "DNF")]), null);
 });
-test("achievements use official times, persist milestones, and stay per session", () => {
+test("speed achievements use official times, span sessions, and retract invalid results", () => {
   let data = store();
   data.sessions[0].solves = [s(29, "+2"), s(1, "DNF")];
   data = evaluateAchievements(data);
-  assert.equal(data.achievements["main:sub-30"], undefined);
+  assert.equal(data.achievements["global:333:single:sub-30"], undefined);
   data.sessions[0].solves = [s(19)];
   data = evaluateAchievements(data);
-  assert.ok(data.achievements["main:sub-20"]);
+  assert.ok(data.achievements["global:333:single:sub-20"]);
   assert.equal(data.achievements["other:sub-20"], undefined);
   data.sessions[0].solves = [];
-  assert.ok(evaluateAchievements(data).achievements["main:sub-20"]);
+  assert.equal(
+    evaluateAchievements(data).achievements["global:333:single:sub-20"],
+    undefined,
+  );
 });
 test("daily selection is deterministic, stays fixed, and suppresses 20/8 prior cases", () => {
   let a = store();

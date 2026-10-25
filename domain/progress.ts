@@ -1,31 +1,101 @@
-import { Store } from "./models";
-import { best } from "./statistics";
-export function evaluateAchievements(store: Store): Store {
-  const unlocked = { ...store.achievements };
-  let changed = false;
-  const add = (key: string) => {
-    if (!unlocked[key]) {
-      unlocked[key] = Date.now();
-      changed = true;
-    }
-  };
-  for (const s of store.sessions) {
-    const pb = best(s.solves);
-    for (const n of [30, 20, 15, 12, 10])
-      if (pb !== null && pb < n * 1000) add(`${s.id}:sub-${n}`);
-    for (const n of [100, 200, 500, 1000, 2000, 5000, 10000])
-      if (s.solves.length >= n) add(`${s.id}:solves-${n}`);
+import { Solve, Store } from "./models";
+import { average, best, resultMs } from "./statistics";
+export { evaluateAchievements } from "./achievements";
+
+export type AverageRecord = {
+  value: number;
+  entries: { solve: Solve; solveNumber: number; excluded: boolean }[];
+};
+
+export function bestAverageRecord(
+  solves: Solve[],
+  window: number,
+): AverageRecord | null {
+  const newestFirst = [...solves].sort((a, b) => b.createdAt - a.createdAt);
+  let record: AverageRecord | null = null;
+  for (let start = 0; start <= newestFirst.length - window; start++) {
+    const group = newestFirst.slice(start, start + window);
+    const value = average(group, window)!;
+    if (record && value >= record.value) continue;
+    const trim = window === 3 ? 0 : Math.ceil(window * 0.05);
+    const ranked = group
+      .map((solve, index) => ({ solve, index }))
+      .sort((a, b) => resultMs(a.solve) - resultMs(b.solve));
+    const excluded = new Set(
+      trim
+        ? [...ranked.slice(0, trim), ...ranked.slice(-trim)].map(
+            ({ index }) => index,
+          )
+        : [],
+    );
+    record = {
+      value,
+      entries: group
+        .map((solve, index) => ({
+          solve,
+          solveNumber: solves.length - start - index,
+          excluded: excluded.has(index),
+        }))
+        .reverse(),
+    };
   }
-  for (const type of ["OLL", "PLL"]) {
-    const all = store.cases.filter((c) => c.type === type);
-    if (all.every((c) => store.learned.includes(c.id)))
-      add(`global:full-${type}`);
-    const two = all.filter((c) => c.twoLook);
-    if (two.length && two.every((c) => store.learned.includes(c.id)))
-      add(`global:2-look-${type}`);
-  }
-  return changed ? { ...store, achievements: unlocked } : store;
+  return record;
 }
+
+export function solveAxisTicks(
+  solveCount: number,
+  plotWidth: number,
+): number[] {
+  const start = 5;
+  const end = Math.max(start, solveCount);
+  if (end === start) return [start];
+
+  const gap = Math.max(44, String(end).length * 7 + 20);
+  const width = Math.max(1, plotWidth);
+  const intervals = Math.max(1, Math.floor(width / gap));
+  const targetStep = Math.max(5, (end - start) / intervals);
+  const magnitude = 10 ** Math.floor(Math.log10(targetStep));
+  const step =
+    [1, 2.5, 5, 10].find((factor) => factor * magnitude >= targetStep)! *
+    magnitude;
+
+  const ticks = [start];
+  for (
+    let tick = Math.ceil((start + 1) / step) * step;
+    tick < end;
+    tick += step
+  ) {
+    const fromPrevious =
+      ((tick - ticks[ticks.length - 1]) / (end - start)) * width;
+    const fromEnd = ((end - tick) / (end - start)) * width;
+    if (fromPrevious >= gap && fromEnd >= gap) ticks.push(tick);
+  }
+  return [...ticks, end];
+}
+
+export function rollingAverageSeries(solves: Solve[], window: number) {
+  const chronological = [...solves].sort((a, b) => a.createdAt - b.createdAt);
+  return chronological.slice(window - 1).map((_, index) => {
+    const time = average(chronological.slice(index, index + window), window);
+    return {
+      solveNumber: index + window,
+      timeMs: time !== null && Number.isFinite(time) ? time : null,
+    };
+  });
+}
+
+export function practiceSingleRecords(solves: Solve[]) {
+  let bestSingle: Solve | null = null;
+  let worstSingle: Solve | null = null;
+  for (const solve of solves) {
+    const time = resultMs(solve);
+    if (Number.isFinite(time) && (!bestSingle || time < resultMs(bestSingle)))
+      bestSingle = solve;
+    if (!worstSingle || time > resultMs(worstSingle)) worstSingle = solve;
+  }
+  return { bestSingle, worstSingle };
+}
+
 export const localDate = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 export function selectDailies(store: Store, date = localDate()): Store {

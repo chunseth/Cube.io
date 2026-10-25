@@ -60,16 +60,8 @@ export function caseDiagramSVG(
           ? caseColors.U
           : "#344458"
         : caseColors[state[index]];
-  const labels = [
-    { face: "B", x: 96, y: 17 },
-    { face: "F", x: 96, y: 183 },
-    { face: "L", x: 14, y: 101 },
-    { face: "R", x: 178, y: 101 },
-  ];
   return `<svg xmlns="http://www.w3.org/2000/svg" id="${imageId.replace(/[^a-zA-Z0-9_-]/g, "")}" width="192" height="192" viewBox="0 0 192 192">
 <rect x="1" y="1" width="190" height="190" rx="22" fill="#101b2a" stroke="#304257"/>
 ${caseFacelets.map((s) => `<rect data-facelet="${s.index}" x="${s.x}" y="${s.y}" width="${s.width}" height="${s.height}" rx="3" fill="${fill(s.index)}" stroke="#0b1420" stroke-width="1.2"/>`).join("\n")}
-${labels.map((l) => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="${oll ? "#a7b9cd" : caseColors[l.face]}">${l.face}</text>`).join("\n")}
-<text x="96" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#473b17">U</text>
 </svg>`;
 }

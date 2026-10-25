@@ -2,14 +2,46 @@
   "expo": {
     "name": "Cube.io",
     "slug": "cube-io",
+    "version": "0.1.0",
+    "icon": "./assets/icon.png",
     "scheme": "cubeio",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "dark",
-    "plugins": ["expo-router", "expo-sqlite"],
+    "plugins": ["expo-router", "expo-sqlite", "expo-font", "expo-status-bar"],
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "app.cubeio.trainer"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sethchun.cubeio",
+      "requireFullScreen": false,
+      "infoPlist": {
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
+      }
     },
-    "backgroundColor": "#0c1420"
+    "backgroundColor": "#0c1420",
+    "web": {
+      "output": "single"
+    },
+    "extra": {
+      "supportedApplePlatforms": ["iOS", "iPadOS"],
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "7344e141-a3ad-4d1e-a7e0-b8afdd0e053b"
+      }
+    },
+    "owner": "esht"
   }
 }

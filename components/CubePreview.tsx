@@ -1,15 +1,10 @@
-import { useMemo, useState, useRef } from "react";
-import { Text, View, PanResponder } from "react-native";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { Text, View, PanResponder, ViewStyle } from "react-native";
 import Cube from "../vendor/cubejs";
 import Svg, { Polygon, Rect, SvgXml } from "react-native-svg";
 import { caseDiagramSVG } from "../domain/caseDiagram";
 import { canonicalCube } from "../domain/lastLayer";
-import {
-  ollQuestionSVG,
-  pllQuestionSVG,
-  projectCube,
-} from "../domain/cubeProjection";
-import { Button } from "./common";
+import { projectCube, projectRecognitionCube } from "../domain/cubeProjection";
 import { ui } from "./theme";
 const colors: Record<string, string> = {
   U: "#f4d45b",
@@ -71,18 +66,7 @@ export function OllQuestion({
   setup: string;
   size?: number;
 }) {
-  const xml = useMemo(
-    () => ollQuestionSVG(canonicalCube(setup).asString()),
-    [setup],
-  );
-  return (
-    <View
-      accessibilityLabel="OLL question: U, F and R faces visible; F2L blank; fixed view"
-      style={{ width: size, height: (size * 250) / 290 }}
-    >
-      <SvgXml xml={xml} width={size} height={(size * 250) / 290} />
-    </View>
-  );
+  return <RotatingRecognitionCube setup={setup} oll size={size} fixedView />;
 }
 export function PllQuestion({
   setup,
@@ -91,19 +75,11 @@ export function PllQuestion({
   setup: string;
   size?: number;
 }) {
-  const xml = useMemo(
-    () => pllQuestionSVG(canonicalCube(setup).asString()),
-    [setup],
-  );
   return (
-    <View
-      accessibilityLabel="PLL question: U, F and R faces visible; F2L blank; fixed view"
-      style={{ width: size, height: (size * 250) / 290 }}
-    >
-      <SvgXml xml={xml} width={size} height={(size * 250) / 290} />
-    </View>
+    <RotatingRecognitionCube setup={setup} oll={false} size={size} fixedView />
   );
 }
+
 export function CubePreview({
   notation,
   locked = false,
@@ -111,6 +87,7 @@ export function CubePreview({
   whiteTop = false,
   size = 290,
   showControls = true,
+  onInteractionChange,
 }: {
   notation: string;
   locked?: boolean;
@@ -118,6 +95,7 @@ export function CubePreview({
   whiteTop?: boolean;
   size?: number;
   showControls?: boolean;
+  onInteractionChange?: (active: boolean) => void;
 }) {
   const palette = whiteTop ? scrambleColors : colors;
   const [yaw, setYaw] = useState(45);
@@ -127,13 +105,15 @@ export function CubePreview({
   const drag = useMemo(
     () =>
       PanResponder.create({
+        onStartShouldSetPanResponder: () => !locked,
+        onPanResponderTerminationRequest: () => false,
         onMoveShouldSetPanResponder: (_e, g) =>
           !locked && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
         onPanResponderGrant: () => {
           dragStart.current = yawRef.current;
         },
         onPanResponderMove: (_e, g) => {
-          if (!locked) setYaw(dragStart.current + g.dx * 0.6);
+          if (!locked) setYaw(dragStart.current - g.dx * 0.6);
         },
       }),
     [locked],
@@ -151,8 +131,17 @@ export function CubePreview({
     >
       <View
         {...drag.panHandlers}
+        onTouchStart={() => !locked && onInteractionChange?.(true)}
+        onTouchEnd={() => onInteractionChange?.(false)}
+        onTouchCancel={() => onInteractionChange?.(false)}
         accessibilityLabel="Cube showing up and two side faces"
-        style={{ width: size, height: (size * 280) / 290 }}
+        style={
+          {
+            width: size,
+            height: (size * 280) / 290,
+            touchAction: "none",
+          } as ViewStyle
+        }
       >
         <Svg
           width={size}
@@ -171,12 +160,6 @@ export function CubePreview({
           ))}
         </Svg>
       </View>
-      {!locked && showControls && (
-        <View style={ui.row}>
-          <Button title="↶ Rotate" onPress={() => setYaw((r) => r - 90)} />
-          <Button title="Rotate ↷" onPress={() => setYaw((r) => r + 90)} />
-        </View>
-      )}
     </View>
   );
 }
@@ -223,12 +206,110 @@ export function CubeNet({
               height={9.2}
               rx={0.6}
               fill={palette[state[face * 9 + i]]}
-              stroke="#718392"
-              strokeWidth={0.45}
+              stroke="#07101a"
+              strokeWidth={0.8}
             />
           )),
         )}
       </Svg>
+    </View>
+  );
+}
+
+export function RotatingRecognitionCube({
+  setup,
+  oll,
+  size = 252,
+  autoRotate = false,
+  fixedView = false,
+}: {
+  setup: string;
+  oll: boolean;
+  size?: number;
+  autoRotate?: boolean;
+  fixedView?: boolean;
+}) {
+  const [yaw, setYaw] = useState(45);
+  useEffect(() => {
+    if (!autoRotate) return;
+    const start = performance.now();
+    setYaw(45);
+    const timer = setInterval(
+      () => setYaw(45 + (((performance.now() - start) * 0.018) % 360)),
+      32,
+    );
+    return () => clearInterval(timer);
+  }, [autoRotate, setup]);
+  const yawRef = useRef(yaw);
+  yawRef.current = yaw;
+  const dragStart = useRef(45);
+  const drag = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderTerminationRequest: () => false,
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 6 &&
+          Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderGrant: () => {
+          dragStart.current = yawRef.current;
+        },
+        onPanResponderMove: (_event, gesture) =>
+          setYaw(dragStart.current - gesture.dx * 0.65),
+      }),
+    [],
+  );
+  const state = useMemo(() => canonicalCube(setup).asString(), [setup]);
+  const stickers = useMemo(
+    () => projectRecognitionCube(state, fixedView ? 45 : yaw, oll),
+    [state, yaw, oll, fixedView],
+  );
+  return (
+    <View style={{ alignItems: "center" }}>
+      <View
+        {...(autoRotate || fixedView ? {} : drag.panHandlers)}
+        pointerEvents={autoRotate || fixedView ? "none" : "auto"}
+        accessibilityLabel={
+          fixedView
+            ? `${oll ? "OLL" : "PLL"} question: U, F and R faces visible; F2L hidden; fixed view`
+            : autoRotate
+              ? "Automatically rotating cube: yellow up, showing all four side faces."
+              : "Recognition cube: yellow up, two side faces visible. Swipe left or right to inspect all four sides."
+        }
+        style={
+          {
+            width: size,
+            height: (size * 280) / 290,
+            touchAction: "none",
+          } as ViewStyle
+        }
+      >
+        <Svg
+          width={size}
+          height={(size * 280) / 290}
+          viewBox="-145 -140 290 280"
+        >
+          {stickers.map((s) => (
+            <Polygon
+              key={s.id}
+              points={s.points}
+              fill={
+                s.displayColor === "null" ? "#344050" : colors[s.displayColor]
+              }
+              stroke={s.displayColor === "null" ? "none" : "#23313e"}
+              strokeWidth={2.5}
+              strokeLinejoin="round"
+            />
+          ))}
+        </Svg>
+      </View>
+      {!autoRotate && !fixedView && (
+        <>
+          <Text style={[ui.badge, { marginBottom: 10 }]}>
+            Swipe to view all four sides
+          </Text>
+        </>
+      )}
     </View>
   );
 }

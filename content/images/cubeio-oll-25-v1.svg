@@ -21,9 +21,4 @@
 <rect data-facelet="18" x="48" y="150" width="30" height="16" rx="3" fill="#344458" stroke="#0b1420" stroke-width="1.2"/>
 <rect data-facelet="19" x="81" y="150" width="30" height="16" rx="3" fill="#344458" stroke="#0b1420" stroke-width="1.2"/>
 <rect data-facelet="20" x="114" y="150" width="30" height="16" rx="3" fill="#ffda67" stroke="#0b1420" stroke-width="1.2"/>
-<text x="96" y="17" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#a7b9cd">B</text>
-<text x="96" y="183" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#a7b9cd">F</text>
-<text x="14" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#a7b9cd">L</text>
-<text x="178" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" fill="#a7b9cd">R</text>
-<text x="96" y="101" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#473b17">U</text>
 </svg>

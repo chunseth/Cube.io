@@ -43,14 +43,21 @@ export const ui = StyleSheet.create({
     borderColor: color.line,
     marginBottom: 14,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
   between: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
+    flexWrap: "wrap",
   },
   button: {
+    minHeight: 44,
     backgroundColor: color.blue,
     paddingHorizontal: 17,
     paddingVertical: 14,
@@ -78,6 +85,7 @@ export const ui = StyleSheet.create({
   page: { padding: 22, paddingBottom: 40 },
   divider: { height: 1, backgroundColor: color.line, marginVertical: 18 },
   chip: {
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,

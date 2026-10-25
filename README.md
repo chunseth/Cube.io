@@ -1,6 +1,16 @@
 # Cube.io
 
-An offline-first Expo / React Native practice app for intermediate 3×3 cubers. The implementation follows the referenced “Discuss App Goals Architecture Content” plan and PRD.
+An iOS and iPadOS app for iPhone and iPad: an offline-first Expo / React Native practice app for intermediate 3×3 cubers. The implementation follows the referenced “Discuss App Goals Architecture Content” plan and PRD.
+
+## iPhone and iPad layouts
+
+The package supports iOS and iPadOS (`ios.supportsTablet: true`), portrait and landscape, and resizable iPad multitasking windows. Layouts respond to available window width: compact phone spacing, two-column phone case grids, three-column iPad grids, and four columns on larger iPad windows. The timer places previews beside the clock in landscape; dialogs use centered panels on iPad and safe-area-aware bottom sheets on phones.
+
+Validate on 320, 375, 390, and 430-point phone widths and 768, 820, 1024, and 1366-point iPad widths, including rotation, Split View, larger text, and the keyboard. An Expo iOS export is a JavaScript bundle; App Store distribution still requires a signed native build.
+
+## SDK upgrade status
+
+The project is currently on Expo SDK 58. The SDK 54 baseline is preserved in commit `3662c42`. See [SDK 58 upgrade checks](docs/sdk-58-upgrade.md) for current validation and iPhone demo instructions. Previous steps: [SDK 57](docs/sdk-57-upgrade.md), [SDK 56](docs/sdk-56-upgrade.md), [SDK 55](docs/sdk-55-upgrade.md). Physical-device testing remains outstanding.
 
 ## Run
 
@@ -16,11 +26,16 @@ npm run typecheck
 
 Use Expo Go on iPhone, or an iOS simulator, for native interaction testing. The browser version is a local preview and content authoring tool; iPhone remains the product target.
 
+## EAS builds
+
+The app is linked to [@esht/cube-io](https://expo.dev/accounts/esht/projects/cube-io). `eas.json` includes development, preview, and production profiles, plus separate iOS simulator profiles. Use `npm run build:ios` for an App Store/TestFlight build, `npm run build:ios:preview` for a registered device preview, or `npm run build:ios:simulator` for a standalone simulator build. See [EAS setup and signing](docs/eas-build.md) for all commands and first-build requirements.
+
 ## Implemented
 
 - Four working tabs: Timer, Train, Algorithms, Progress.
 - Dark theme with blue accents and white text, bundled Inter UI font and Share Tech Mono timer font.
-- Timestamp-based timer; 550 ms red-to-green preparation, release to start, touch anywhere to stop. Active solves clear the UI.
+- Timestamp-based timer; 500 ms red-to-green preparation, release to start, touch anywhere to stop. Active solves clear the UI.
+- After 150 ms of a red hold, the contact locks to timer preparation. Later movement cannot trigger a swipe or cancel readiness; swipes that start before that boundary still work normally.
 - Optional inspection with 8/12 second visual, haptic and spoken cues; +2 at 15 seconds and DNF at 17. A hold/release begins inspection; a second hold/release starts the solve.
 - Directional swipes: left refreshes scramble, right confirms deletion, down enters Stackmat time, up opens penalties and (only for manual entries) editing.
 - Local random-state scramble generation using the existing vendored cubejs solver. Normal scrambles use white on top and green in front. Cube preview reflects the scramble; manual horizontal drag rotates the cube smoothly, with optional quarter-turn buttons.
@@ -36,6 +51,16 @@ Use Expo Go on iPhone, or an iOS simulator, for native interaction testing. The 
 - Recognition uses the verified scramble bank: four-sided diagrams in full view, locked 3D cubes in two-sided mode, OLL diagram choices and PLL names, immediate correction, and timed attempts. After an answer, the next question is chosen from available cases of the same type.
 - Deterministic daily OLL/PLL persisted by local calendar date; midnight refresh and foreground refresh; 20/8 distinct-case suppression where possible.
 - Session and global milestones, training PBs, learned percentages, skippable knowledge onboarding with group selection and authored case diagrams.
+
+## Achievements
+
+New session records for single, mo3, ao5, ao12, and ao100 play a repeatable, 32-point white text scroll above the Timer's cube and statistics cards at 300 points per second. The first result/window in each session counts as a record. Starting the next solve clears the scroll; reduced-motion mode shows the same text without scrolling.
+
+Lifetime 3×3 banners use plain text: `First sub-20 solve`, `First sub-20 ao5`, and equivalent milestones at 30, 25, 20, 15, 12, and 10 seconds for each statistic. A newly crossed barrier shows its banner even while the session record scroll is playing; completing or dismissing either celebration does not dismiss the other. Windows stay within a session; milestones span regular 3×3 sessions. OLL/PLL practice, recognition attempts, moved trainer results, and other events cannot unlock full-solve milestones. Solve counts celebrate 100, 500, 1,000, 2,000, 5,000, and 10,000 full solves.
+
+Learning banners celebrate OLL counts 1/5/20/29/50/57, PLL counts 1/10/21, and completion of each actual 2-look set. Individual learned actions and execution-training learned confirmations can celebrate progress. Onboarding, presets, and bulk knowledge entry quietly acknowledge intermediate milestones; a newly acknowledged full set produces only `Learned 57 OLL` or `Learned 21 PLL`. Unlearning/relearning never repeats learning achievements.
+
+Only the strongest new milestone gets a banner per solve or learned action; the others are saved quietly. Banners pause during timer preparation, inspection, and solving, and also appear inside learning dialogs. Loading saved progress is quiet. Result edits, penalties, and deletions recalculate speed milestones and pending record scrolls. A +2 uses the corrected time; a DNF invalidates a single or mo3 but can be discarded by a trimmed average. Invalid milestones can be earned again.
 
 ## Authoring case content
 

@@ -49,6 +49,21 @@ export function executionSetup(item: Case, previous = "") {
   ].filter((s) => s !== previous);
   return options[Math.floor(Math.random() * options.length)];
 }
+
+/** Returns a verified setup from the user's learned cases for a practice session. */
+export function knownPracticeSetup(
+  cases: Case[],
+  learned: string[],
+  type: Case["type"],
+  previous = "",
+): string | null {
+  const known = cases.filter(
+    (item) => item.type === type && learned.includes(item.id),
+  );
+  if (!known.length) return null;
+  const item = known[Math.floor(Math.random() * known.length)];
+  return executionSetup(item, previous);
+}
 export function validateContent(value: unknown, existing: Case[]): Case[] {
   if (!value || typeof value !== "object")
     throw new Error("Expected a versioned content document.");

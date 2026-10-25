@@ -279,7 +279,7 @@
     Cube.prototype[key] = value;
   }
 
-  computeMoveTable = function(context, coord, size) {
+  computeMoveTable = function*(context, coord, size) {
     var apply, cube, i, inner, j, k, m, move, o, p, ref, results;
     // Loop through all valid values for the coordinate, setting cube's
     // state in each iteration. Then apply each of the 18 moves to the
@@ -300,6 +300,7 @@
         cube[apply](move);
       }
       results.push(inner);
+      if (i % 16 === 15) yield;
     }
     return results;
   };
@@ -379,7 +380,7 @@
     mergeURtoDF: []
   };
 
-  Cube.computeMoveTables = function(...tables) {
+  function* computeMoveTables(tables) {
     var len, m, name, scope, size, tableName;
     if (tables.length === 0) {
       tables = (function() {
@@ -398,26 +399,25 @@
         continue;
       }
       if (tableName === 'mergeURtoDF') {
-        this.moveTables.mergeURtoDF = (function() {
-          var UBtoDF, URtoUL, o, results;
-          results = [];
-          for (URtoUL = o = 0; o <= 335; URtoUL = ++o) {
-            results.push((function() {
-              var p, results1;
-              results1 = [];
-              for (UBtoDF = p = 0; p <= 335; UBtoDF = ++p) {
-                results1.push(mergeURtoDF(URtoUL, UBtoDF));
-              }
-              return results1;
-            })());
-          }
-          return results;
-        })();
+        const merged = [];
+        for (let a = 0; a <= 335; a++) {
+          const row = [];
+          for (let b = 0; b <= 335; b++) row.push(mergeURtoDF(a, b));
+          merged.push(row);
+          yield;
+        }
+        this.moveTables.mergeURtoDF = merged;
       } else {
         [scope, size] = moveTableParams[tableName];
-        this.moveTables[tableName] = computeMoveTable(scope, tableName, size);
+        this.moveTables[tableName] = yield* computeMoveTable(scope, tableName, size);
       }
     }
+    return this;
+  }
+
+  Cube.computeMoveTables = function(...tables) {
+    const steps = computeMoveTables.call(this, tables);
+    while (!steps.next().done) {}
     return this;
   };
 
@@ -488,7 +488,7 @@
     }
   };
 
-  computePruningTable = function(phase, size, currentCoords, nextIndex) {
+  computePruningTable = function*(phase, size, currentCoords, nextIndex) {
     var current, depth, done, index, len, m, move, moves, next, o, ref, table, x;
     // Initialize all values to 0xF
     table = (function() {
@@ -512,6 +512,7 @@
     // depth.
     while (done !== size) {
       for (index = m = 0, ref = size - 1; (0 <= ref ? m <= ref : m >= ref); index = 0 <= ref ? ++m : --m) {
+        if (index % 2048 === 0) yield;
         if (!(pruning(table, index) === depth)) {
           continue;
         }
@@ -631,7 +632,7 @@
     ]
   };
 
-  Cube.computePruningTables = function(...tables) {
+  function* computePruningTables(tables) {
     var len, m, name, params, tableName;
     if (tables.length === 0) {
       tables = (function() {
@@ -650,14 +651,52 @@
         continue;
       }
       params = pruningTableParams[tableName];
-      this.pruningTables[tableName] = computePruningTable(...params);
+      this.pruningTables[tableName] = yield* computePruningTable(...params);
     }
+    return this;
+  }
+
+  Cube.computePruningTables = function(...tables) {
+    const steps = computePruningTables.call(this, tables);
+    while (!steps.next().done) {}
     return this;
   };
 
   Cube.initSolver = function() {
     Cube.computeMoveTables();
     return Cube.computePruningTables();
+  };
+
+  // The app can prepare the same tables without blocking a frame for the whole
+  // initialization. Publish each table only once it is complete.
+  let initialization;
+  Cube.initSolverAsync = function() {
+    if (initialization) return initialization;
+    const cube = this;
+    const steps = (function*() {
+      yield* computeMoveTables.call(cube, []);
+      yield* computePruningTables.call(cube, []);
+    })();
+    initialization = new Promise((resolve, reject) => {
+      const run = () => {
+        try {
+          const deadline = performance.now() + 4;
+          do {
+            if (steps.next().done) {
+              resolve();
+              return;
+            }
+          } while (performance.now() < deadline);
+          setTimeout(run, 0);
+        } catch (error) {
+          initialization = null;
+          reject(error);
+        }
+      };
+      // Always let the first screen commit before doing any work.
+      setTimeout(run, 0);
+    });
+    return initialization;
   };
 
   Cube.prototype.solveUpright = function(maxDepth = 22) {

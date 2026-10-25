@@ -1,5 +1,6 @@
 import {
   DEFAULT_SESSION_NAME,
+  ensurePracticeSessions,
   normalizeDefaultSession,
 } from "../domain/sessions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,7 +9,29 @@ import cases from "../content/cases.json";
 import { mergeBundledCases } from "../domain/catalog";
 export function defaultStore(): Store {
   return {
-    sessions: [{ id: "main", name: DEFAULT_SESSION_NAME, solves: [] }],
+    sessions: [
+      {
+        id: "main",
+        name: DEFAULT_SESSION_NAME,
+        solves: [],
+        createdAt: Date.now(),
+        event: "333",
+      },
+      {
+        id: "oll-practice",
+        name: "OLL Practice",
+        solves: [],
+        createdAt: Date.now(),
+        event: "333",
+      },
+      {
+        id: "pll-practice",
+        name: "PLL Practice",
+        solves: [],
+        createdAt: Date.now(),
+        event: "333",
+      },
+    ],
     activeSessionId: "main",
     preferences: {
       inspection: false,
@@ -33,7 +56,7 @@ export async function loadStore(): Promise<Store> {
     return {
       ...saved,
       cases: mergeBundledCases(saved.cases),
-      sessions: saved.sessions.map(normalizeDefaultSession),
+      sessions: ensurePracticeSessions(saved.sessions),
     };
   }
   const legacy = await AsyncStorage.getItem("cubeio.timer.v1");
@@ -53,7 +76,7 @@ export async function loadStore(): Promise<Store> {
       initial.activeSessionId = old.activeSessionId;
     }
   }
-  initial.sessions = initial.sessions.map(normalizeDefaultSession);
+  initial.sessions = ensurePracticeSessions(initial.sessions);
   return initial;
 }
 let queue: Promise<void> = Promise.resolve();

@@ -278,8 +278,7 @@ test("78 vector diagrams expose exactly 21 unique stickers with correct unfolded
     );
     assert.equal(fs.readFileSync(file, "utf8").trim(), expected);
     assert.equal((expected.match(/data-facelet=/g) || []).length, 21);
-    for (const side of ["B", "F", "L", "R"])
-      assert.ok(expected.includes(">" + side + "</text>"));
+    assert.equal(expected.includes("<text"), false);
   }
 });
 

@@ -5,6 +5,7 @@ export type Solve = {
   scramble: string;
   createdAt: number;
   source: "timer" | "manual";
+  comment?: string;
   penalty: Penalty;
 };
 export type Session = {
@@ -12,6 +13,8 @@ export type Session = {
   name: string;
   solves: Solve[];
   hasAo5?: boolean;
+  createdAt?: number;
+  event?: string;
 };
 export type Case = {
   id: string;

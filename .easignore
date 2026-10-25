@@ -1,0 +1,18 @@
+# Keep local output, screenshots, and credentials out of cloud build archives.
+node_modules/
+.expo/
+dist/
+dist-ios/
+.test-build/
+*.log
+.DS_Store
+artifacts/
+credentials.json
+*.p8
+*.p12
+*.mobileprovision
+.env.local
+.env.*.local
+.aws/
+.agents/
+.codex/

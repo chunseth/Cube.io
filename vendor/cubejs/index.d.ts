@@ -1,6 +1,7 @@
 declare class Cube {
   constructor();
   static initSolver(): void;
+  static initSolverAsync(): Promise<void>;
   static scramble(): string;
   static inverse(notation: string): string;
   move(notation: string): Cube;

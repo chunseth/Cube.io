@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useResponsiveLayout } from "./responsive";
+import { useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { AlgorithmAnimation } from "./AlgorithmAnimation";
 import {
   Platform,
   Linking,
@@ -9,19 +12,32 @@ import {
   View,
 } from "react-native";
 import { Case, Store } from "../domain/models";
+import { UpdateStore } from "../domain/achievements";
 import { best, formatTime } from "../domain/statistics";
 import { recognitionReady, validateContent } from "../domain/content";
-import { verifySetup } from "../domain/lastLayer";
-import { bundledById } from "../domain/catalog";
 import { CaseImage, CubePreview } from "./CubePreview";
 import { Button, Sheet } from "./common";
 import { color, ui } from "./theme";
+const categoryChip = {
+  minHeight: 32,
+  paddingVertical: 6,
+  justifyContent: "center" as const,
+};
+
+export type AlgorithmViewState = {
+  type: "OLL" | "PLL";
+  filter: string;
+  family: string;
+  pbSort: "fastest" | "slowest" | null;
+};
 type Props = {
   store: Store;
-  update: (fn: (s: Store) => Store) => void;
+  update: UpdateStore;
   onExecution: (c: Case) => void;
   onRecognition: (c: Case) => void;
   initialCase?: Case;
+  initialView?: AlgorithmViewState;
+  onViewChange?: (view: AlgorithmViewState) => void;
   onCloseCase?: () => void;
 };
 export function Algorithms({
@@ -30,51 +46,139 @@ export function Algorithms({
   onExecution,
   onRecognition,
   initialCase,
+  initialView,
+  onViewChange,
   onCloseCase,
 }: Props) {
-  const [family, setFamily] = useState("All families");
-  const [type, setType] = useState<"OLL" | "PLL">("OLL"),
-    [filter, setFilter] = useState("All"),
-    [search, setSearch] = useState("");
+  const layout = useResponsiveLayout();
+  const [preview, setPreview] = useState<{
+    algorithm: string;
+    type: "OLL" | "PLL";
+  } | null>(null);
+  const [type, setType] = useState<"OLL" | "PLL">(initialView?.type ?? "OLL"),
+    [filter, setFilter] = useState(initialView?.filter ?? "All"),
+    [family, setFamily] = useState(initialView?.family ?? "none"),
+    [pbSort, setPbSort] = useState<"fastest" | "slowest" | null>(
+      initialView?.pbSort ?? null,
+    ),
+    [sortPicker, setSortPicker] = useState(false),
+    [settings, setSettings] = useState(false),
+    [bulk, setBulk] = useState(false),
+    [bulkLearned, setBulkLearned] = useState<string[]>([]);
   const [caseId, setCaseId] = useState<string | null>(initialCase?.id ?? null),
     [custom, setCustom] = useState("");
   const [editor, setEditor] = useState(false),
     [json, setJson] = useState(""),
     [error, setError] = useState("");
   const item = store.cases.find((c) => c.id === caseId);
+  useEffect(() => {
+    onViewChange?.({ type, filter, family, pbSort });
+  }, [type, filter, family, pbSort, onViewChange]);
+  const executionPb = (caseId: string) =>
+    best(
+      store.attempts.filter(
+        (attempt) => attempt.caseId === caseId && attempt.mode === "execution",
+      ),
+    );
   const toggleLearned = (ids: string[]) =>
-    update((s) => ({
-      ...s,
-      learned: ids.every((id) => s.learned.includes(id))
-        ? s.learned.filter((id) => !ids.includes(id))
-        : [...new Set([...s.learned, ...ids])],
-    }));
+    update(
+      (s) => ({
+        ...s,
+        learned: ids.every((id) => s.learned.includes(id))
+          ? s.learned.filter((id) => !ids.includes(id))
+          : [...new Set([...s.learned, ...ids])],
+      }),
+      { learning: "learn" },
+    );
   const openEditor = () => {
     setJson(JSON.stringify({ version: 1, cases: store.cases }, null, 2));
     setError("");
     setEditor(true);
   };
+  const casesForType = store.cases.filter((c) => c.type === type);
+  const learnedCount = casesForType.filter((c) =>
+    store.learned.includes(c.id),
+  ).length;
+  const partial = learnedCount > 0 && learnedCount < casesForType.length;
+  const allFamilies =
+    type === "OLL"
+      ? [...new Set(casesForType.map((c) => c.family))]
+      : ["A", "E", "F", "G", "H", "J", "N", "R", "T", "U", "V", "Y", "Z"];
+  const categoryKey = (value: string) => value;
+  const familyLabel = (value: string) =>
+    type === "OLL" ? value.replace(/\s*shapes?\b/gi, "").trim() : value;
+  const visible = casesForType.filter(
+    (c) =>
+      (filter === "All" ||
+        (filter === "2 Look"
+          ? type === "OLL"
+            ? c.family === "Cross"
+            : c.name.startsWith("A") || c.name.startsWith("U")
+          : (filter === "Learned") === store.learned.includes(c.id))) &&
+      (family === "all" ||
+        family === "two-look" ||
+        (type === "OLL"
+          ? c.family === family
+          : c.name.startsWith(categoryKey(family)))),
+  );
+  const groups =
+    type === "OLL"
+      ? [...new Set(visible.map((c) => c.family))]
+      : allFamilies.filter((group) =>
+          visible.some((c) => c.name.startsWith(categoryKey(group))),
+        );
+  const sortByPb = (cases: Case[]) =>
+    [...cases].sort((a, b) => {
+      const aPb = executionPb(a.id);
+      const bPb = executionPb(b.id);
+      if (aPb === null) return bPb === null ? a.name.localeCompare(b.name) : 1;
+      if (bPb === null) return -1;
+      return pbSort === "fastest" ? aPb - bPb : bPb - aPb;
+    });
+  const caseGroups = pbSort
+    ? [
+        {
+          title: `PB · ${pbSort === "fastest" ? "fastest first" : "slowest first"}`,
+          cases: sortByPb(visible),
+        },
+      ]
+    : groups.map((group) => ({
+        title: type === "OLL" ? group : `${group} Perms`,
+        cases: visible.filter((c) =>
+          type === "OLL"
+            ? c.family === group
+            : c.name.startsWith(categoryKey(group)),
+        ),
+      }));
   return (
-    <>
-      <ScrollView contentContainerStyle={ui.page}>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[
+          ui.page,
+          layout.page,
+          bulk && { paddingBottom: 96 },
+        ]}
+      >
         <View style={ui.between}>
           <Text style={ui.title}>Algorithms</Text>
-          <Pressable onPress={openEditor}>
-            <Text style={ui.badge}>Content editor</Text>
-          </Pressable>
         </View>
-        <Text style={[ui.subtitle, { marginTop: 6, marginBottom: 24 }]}>
-          Build your last-layer repertoire.
-        </Text>
-        <View style={ui.row}>
+        <View style={[ui.row, { alignItems: "stretch", marginTop: 20 }]}>
           {(["OLL", "PLL"] as const).map((t) => (
             <Pressable
               key={t}
               onPress={() => {
                 setType(t);
-                setFamily("All families");
+                setFilter("All");
+                setFamily("none");
+                setPbSort(null);
               }}
-              style={[ui.chip, type === t && ui.selected]}
+              style={[
+                ui.chip,
+                { flex: 1, alignItems: "center" },
+                type === t && ui.selected,
+              ]}
             >
               <Text style={ui.text}>
                 {t} ·{" "}
@@ -87,135 +191,329 @@ export function Algorithms({
               </Text>
             </Pressable>
           ))}
+          <Pressable
+            onPress={() => setSettings(true)}
+            style={ui.chip}
+            accessibilityLabel="Learning settings"
+          >
+            <Ionicons name="settings-outline" size={21} color={color.accent} />
+          </Pressable>
         </View>
-        <View style={[ui.row, { marginTop: 14 }]}>
-          {["All", "Learned", "Unlearned"].map((f) => (
+        <View style={[ui.grid, { marginTop: 14 }]}>
+          <Pressable
+            onPress={() => {
+              setFamily("all");
+              setFilter("All");
+              setPbSort(null);
+            }}
+            style={[ui.chip, categoryChip, family === "all" && ui.selected]}
+          >
+            <Text style={ui.badge}>All {type}</Text>
+          </Pressable>
+          {["2 Look", ...(partial ? ["Learned", "Unlearned"] : [])].map((f) => (
             <Pressable
               key={f}
-              style={[ui.chip, filter === f && ui.selected]}
-              onPress={() => setFilter(f)}
+              style={[ui.chip, categoryChip, filter === f && ui.selected]}
+              onPress={() => {
+                setPbSort(null);
+                if (f === "2 Look") {
+                  const deselect = filter === "2 Look";
+                  setFilter(deselect ? "All" : "2 Look");
+                  setFamily(deselect ? "none" : "two-look");
+                } else {
+                  setFilter(f);
+                  if (family === "two-look") setFamily("all");
+                }
+              }}
             >
               <Text style={ui.badge}>{f}</Text>
             </Pressable>
           ))}
+          {allFamilies.map((name) => (
+            <Pressable
+              key={name}
+              onPress={() => {
+                setFamily(name);
+                setPbSort(null);
+                if (filter === "2 Look") setFilter("All");
+              }}
+              style={[ui.chip, categoryChip, family === name && ui.selected]}
+            >
+              <Text style={ui.badge}>{familyLabel(name)}</Text>
+            </Pressable>
+          ))}
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 14 }}
-        >
-          <View style={ui.row}>
-            {[
-              "All families",
-              ...new Set(
-                store.cases.filter((c) => c.type === type).map((c) => c.family),
-              ),
-            ].map((f) => (
+        <View style={[ui.row, { marginTop: 10, zIndex: 4 }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sort cases by personal best"
+            onPress={() => setSortPicker((open) => !open)}
+            style={[ui.chip, categoryChip]}
+          >
+            <Ionicons name="filter-outline" size={17} color={color.muted} />
+          </Pressable>
+          {sortPicker && (
+            <View
+              style={{
+                position: "absolute",
+                top: 42,
+                left: 0,
+                width: 190,
+                padding: 8,
+                gap: 4,
+                backgroundColor: color.surface,
+                borderColor: color.line,
+                borderWidth: 1,
+                borderRadius: 12,
+                shadowColor: "#000000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.16,
+                shadowRadius: 10,
+                elevation: 8,
+              }}
+            >
+              {pbSort && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setPbSort(null);
+                    setSortPicker(false);
+                  }}
+                  style={{ paddingHorizontal: 10, paddingVertical: 8 }}
+                >
+                  <Text style={ui.badge}>Remove filter</Text>
+                </Pressable>
+              )}
               <Pressable
-                key={f}
-                onPress={() => setFamily(f)}
-                style={[ui.chip, family === f && ui.selected]}
-              >
-                <Text style={ui.badge}>{f}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
-        <TextInput
-          placeholderTextColor={color.muted}
-          keyboardAppearance="dark"
-          style={ui.input}
-          placeholder="Search case or family"
-          value={search}
-          onChangeText={setSearch}
-        />
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 18 }}
-        >
-          <View style={ui.row}>
-            <Button
-              title="Mark 2-look learned"
-              onPress={() =>
-                toggleLearned(
-                  store.cases
-                    .filter((c) => c.type === type && c.twoLook)
-                    .map((c) => c.id),
-                )
-              }
-            />
-            {family !== "All families" && (
-              <Button
-                title="Toggle family learned"
-                onPress={() =>
-                  toggleLearned(
-                    store.cases
-                      .filter((c) => c.type === type && c.family === family)
-                      .map((c) => c.id),
-                  )
-                }
-              />
-            )}
-            <Button
-              title="Toggle all learned"
-              onPress={() =>
-                toggleLearned(
-                  store.cases.filter((c) => c.type === type).map((c) => c.id),
-                )
-              }
-            />
-          </View>
-        </ScrollView>
-        <View style={ui.grid}>
-          {store.cases
-            .filter(
-              (c) =>
-                c.type === type &&
-                (family === "All families" || c.family === family) &&
-                (filter === "All" ||
-                  (filter === "Learned") === store.learned.includes(c.id)) &&
-                `${c.name} ${c.family}`
-                  .toLowerCase()
-                  .includes(search.toLowerCase()),
-            )
-            .map((c) => (
-              <Pressable
-                key={c.id}
                 accessibilityRole="button"
-                onPress={() => setCaseId(c.id)}
-                style={[
-                  ui.card,
-                  { width: "47%", alignItems: "center", padding: 16 },
-                  store.learned.includes(c.id) && { borderColor: color.green },
-                ]}
+                onPress={() => {
+                  setPbSort("fastest");
+                  setSortPicker(false);
+                }}
+                style={{ paddingHorizontal: 10, paddingVertical: 8 }}
               >
-                <CaseImage
-                  setup={c.setup}
-                  oll={c.type === "OLL"}
-                  imageId={c.imageId}
-                />
-                <Text style={[ui.text, { marginTop: 14, fontWeight: "600" }]}>
-                  {c.name}
-                  {store.learned.includes(c.id) ? " ✓" : ""}
-                </Text>
-                <Text style={[ui.badge, { marginTop: 6 }]}>{c.family}</Text>
+                <Text style={ui.badge}>Fastest to slowest</Text>
               </Pressable>
-            ))}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setPbSort("slowest");
+                  setSortPicker(false);
+                }}
+                style={{ paddingHorizontal: 10, paddingVertical: 8 }}
+              >
+                <Text style={ui.badge}>Slowest to fastest</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
+        {caseGroups.map((group) => (
+          <View key={group.title} style={{ marginTop: 18 }}>
+            <Text style={[ui.label, { fontSize: 15, marginBottom: 8 }]}>
+              {group.title}
+            </Text>
+            <View style={ui.grid}>
+              {group.cases.map((c) => (
+                <Pressable
+                  key={c.id}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    bulk
+                      ? setBulkLearned((ids) =>
+                          ids.includes(c.id)
+                            ? ids.filter((id) => id !== c.id)
+                            : [...ids, c.id],
+                        )
+                      : setCaseId(c.id)
+                  }
+                  style={[
+                    ui.card,
+                    {
+                      width: layout.cardWidth,
+                      alignItems: "center",
+                      padding: c.type === "OLL" ? 12 : 16,
+                      marginBottom: c.type === "OLL" ? 4 : 14,
+                    },
+                    (bulk
+                      ? bulkLearned.includes(c.id)
+                      : store.learned.includes(c.id)) && {
+                      borderColor: color.green,
+                    },
+                  ]}
+                >
+                  <CaseImage
+                    setup={c.setup}
+                    oll={c.type === "OLL"}
+                    imageId={c.imageId}
+                    size={Math.min(104, layout.cardWidth - 34)}
+                  />
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Mark ${c.name} as learned`}
+                    accessibilityState={{
+                      checked: bulk
+                        ? bulkLearned.includes(c.id)
+                        : store.learned.includes(c.id),
+                    }}
+                    onPress={() =>
+                      bulk
+                        ? setBulkLearned((ids) =>
+                            ids.includes(c.id)
+                              ? ids.filter((id) => id !== c.id)
+                              : [...ids, c.id],
+                          )
+                        : toggleLearned([c.id])
+                    }
+                    style={{ position: "absolute", top: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name={
+                        (
+                          bulk
+                            ? bulkLearned.includes(c.id)
+                            : store.learned.includes(c.id)
+                        )
+                          ? "checkmark-circle"
+                          : "ellipse-outline"
+                      }
+                      size={23}
+                      color={
+                        (
+                          bulk
+                            ? bulkLearned.includes(c.id)
+                            : store.learned.includes(c.id)
+                        )
+                          ? color.green
+                          : color.muted
+                      }
+                    />
+                  </Pressable>
+                  <Text style={[ui.text, { marginTop: 14, fontWeight: "600" }]}>
+                    {c.name}
+                    {(
+                      bulk
+                        ? bulkLearned.includes(c.id)
+                        : store.learned.includes(c.id)
+                    )
+                      ? " ✓"
+                      : ""}
+                  </Text>
+                  <Text style={[ui.badge, { marginTop: 4 }]}>
+                    PB {formatTime(executionPb(c.id))}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ))}
       </ScrollView>
+      {bulk && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: 14,
+            backgroundColor: color.surface,
+            borderTopWidth: 1,
+            borderColor: color.line,
+          }}
+        >
+          <View style={ui.row}>
+            <View style={{ flex: 1 }}>
+              <Button
+                title="Save"
+                onPress={() => {
+                  update(
+                    (s) => ({
+                      ...s,
+                      learned: [
+                        ...s.learned.filter(
+                          (id) => !casesForType.some((c) => c.id === id),
+                        ),
+                        ...bulkLearned,
+                      ],
+                    }),
+                    { learning: "setup" },
+                  );
+                  setBulk(false);
+                }}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button title="Cancel" onPress={() => setBulk(false)} />
+            </View>
+          </View>
+        </View>
+      )}
       {item && (
         <Sheet
           title={item.name}
+          overlay={
+            preview && (
+              <View
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: "#00000088",
+                  padding: 20,
+                }}
+              >
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close algorithm preview"
+                  onPress={() => setPreview(null)}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                  }}
+                />
+                <View
+                  onStartShouldSetResponder={() => true}
+                  style={{
+                    width: "100%",
+                    maxWidth: 420,
+                    borderRadius: 24,
+                    padding: 20,
+                    backgroundColor: color.surface,
+                    borderWidth: 1,
+                    borderColor: color.line,
+                    elevation: 12,
+                    boxShadow: "0 12px 40px #00000066",
+                  }}
+                >
+                  <Text style={[ui.label, { textAlign: "center" }]}>
+                    {item.name} · Algorithm preview
+                  </Text>
+                  <AlgorithmAnimation
+                    algorithm={preview.algorithm}
+                    type={preview.type}
+                  />
+                </View>
+              </View>
+            )
+          }
           onClose={() => {
+            setPreview(null);
             setCaseId(null);
             onCloseCase?.();
           }}
         >
-          <Text style={ui.subtitle}>
-            {item.family}
-            {item.twoLook ? " · 2-look" : ""}
-          </Text>
+          {item.type === "OLL" && (
+            <Text style={ui.subtitle}>
+              {item.family}
+              {item.twoLook ? " · 2-look" : ""}
+            </Text>
+          )}
           {item.setup ? (
             <View style={{ alignItems: "center", marginVertical: 24 }}>
               <CaseImage
@@ -224,14 +522,6 @@ export function Algorithms({
                 size={224}
                 imageId={item.imageId}
               />
-              <Text
-                style={[ui.subtitle, { marginTop: 12, textAlign: "center" }]}
-              >
-                U face + all four side rows · yellow up, green front
-              </Text>
-              {item.imageId && (
-                <Text style={[ui.badge, { marginTop: 4 }]}>{item.imageId}</Text>
-              )}
             </View>
           ) : (
             <View style={[ui.card, { marginTop: 20 }]}>
@@ -241,58 +531,127 @@ export function Algorithms({
               </Text>
             </View>
           )}
-          <Button
-            title={
-              store.learned.includes(item.id)
-                ? "✓ Learned · tap to unmark"
-                : "Mark as learned"
-            }
-            onPress={() => toggleLearned([item.id])}
-          />
-          <View style={[ui.grid, { marginTop: 16 }]}>
-            <Button
-              title="Execution"
-              disabled={!item.setup}
-              onPress={() => onExecution(item)}
-            />
-            <Button
-              title="Recognition"
-              disabled={!recognitionReady(item, store.cases)}
-              onPress={() => onRecognition(item)}
-            />
-          </View>
-          <View style={[ui.grid, { marginVertical: 12 }]}>
-            <Text style={ui.subtitle}>
-              Execution PB{" "}
-              {formatTime(
-                best(
-                  store.attempts.filter(
-                    (a) => a.caseId === item.id && a.mode === "execution",
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 600,
+              alignSelf: "center",
+              marginTop: 16,
+            }}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                store.learned.includes(item.id) ? "Learned" : "Unlearned"
+              }
+              onPress={() => toggleLearned([item.id])}
+              style={[
+                ui.button,
+                {
+                  width: "100%",
+                  backgroundColor: store.learned.includes(item.id)
+                    ? color.green
+                    : color.red,
+                },
+              ]}
+            >
+              <Text style={ui.buttonText}>
+                {store.learned.includes(item.id) ? "✓ Learned" : "Unlearned"}
+              </Text>
+            </Pressable>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 10,
+                gap: 16,
+              }}
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Practice this Case"
+                disabled={!item.setup}
+                onPress={() => onExecution(item)}
+                style={[
+                  ui.button,
+                  { width: "47%", maxWidth: 240 },
+                  !item.setup && { opacity: 0.4 },
+                ]}
+              >
+                <Text style={ui.buttonText}>Practice this Case</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Practice Recognizing"
+                disabled={!recognitionReady(item, store.cases)}
+                onPress={() => onRecognition(item)}
+                style={[
+                  ui.button,
+                  { width: "47%", maxWidth: 240 },
+                  !recognitionReady(item, store.cases) && { opacity: 0.4 },
+                ]}
+              >
+                <Text style={ui.buttonText}>Practice Recognizing</Text>
+              </Pressable>
+            </View>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 8,
+              }}
+            >
+              <Text
+                style={[
+                  ui.subtitle,
+                  { width: "47%", maxWidth: 240, textAlign: "center" },
+                ]}
+              >
+                PB{" "}
+                {formatTime(
+                  best(
+                    store.attempts.filter(
+                      (a) => a.caseId === item.id && a.mode === "execution",
+                    ),
                   ),
-                ),
-              )}
-            </Text>
-            <Text style={ui.subtitle}>
-              Recognition PB{" "}
-              {formatTime(
-                best(
-                  store.attempts.filter(
-                    (a) =>
-                      a.caseId === item.id &&
-                      a.mode !== "execution" &&
-                      a.correct,
+                )}
+              </Text>
+              <Text
+                style={[
+                  ui.subtitle,
+                  { width: "47%", maxWidth: 240, textAlign: "center" },
+                ]}
+              >
+                PB{" "}
+                {formatTime(
+                  best(
+                    store.attempts.filter(
+                      (a) =>
+                        a.caseId === item.id &&
+                        a.mode !== "execution" &&
+                        a.correct,
+                    ),
                   ),
-                ),
-              )}
-            </Text>
+                )}
+              </Text>
+            </View>
           </View>
-          <Text style={[ui.label, { marginTop: 20 }]}>
+          <Text style={[ui.label, { marginTop: 32 }]}>
             YOUR ALGORITHMS · SELECT ANY YOU USE
+          </Text>
+          <Text style={[ui.label, { fontSize: 14, marginBottom: 12 }]}>
+            HOLD AN ALGORITHM TO WATCH ITS MOVES
           </Text>
           {[...item.algorithms, ...(store.custom[item.id] ?? [])].map(
             (a, i) => (
               <Pressable
                 key={`${a}-${i}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${a}. Tap to select, hold to animate.`}
+                delayLongPress={350}
+                onLongPress={() =>
+                  setPreview({ algorithm: a, type: item.type })
+                }
                 onPress={() =>
                   update((s) => ({
                     ...s,
@@ -356,7 +715,6 @@ export function Algorithms({
               setCustom("");
             }}
           />
-          <SetupCatalog item={item} />
           {!!item.sources?.length && (
             <View style={{ gap: 10, marginTop: 20 }}>
               <Text style={ui.label}>REFERENCES</Text>
@@ -384,78 +742,90 @@ export function Algorithms({
           onClose={() => setEditor(false)}
         />
       )}
-    </>
-  );
-}
-function SetupCatalog({ item }: { item: Case }) {
-  const [kind, setKind] = useState("trainer"),
-    [limit, setLimit] = useState(5);
-  const setups = (item.setups ?? []).filter((s) => s.kind === kind);
-  const signature = bundledById.get(item.id)?.signature;
-  const primaryVerified =
-    !!signature && verifySetup(item.setup, item.type, signature);
-  return (
-    <View style={{ marginTop: 28 }}>
-      <Text style={ui.label}>SETUP SCRAMBLES · FROM A SOLVED CUBE</Text>
-      <Text style={[ui.subtitle, { marginBottom: 10 }]}>
-        {primaryVerified
-          ? "F2L preserved · case verified"
-          : "Setup not verified"}
-        {item.type === "OLL"
-          ? " · OLL orientation only; remaining PLL may vary."
-          : " · Last layer oriented."}
-      </Text>
-      <View style={ui.card}>
-        <Text selectable style={[ui.text, { lineHeight: 23 }]}>
-          {item.setup}
-        </Text>
-        <Text style={[ui.badge, { marginTop: 8 }]}>Diagram setup</Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 12 }}
-      >
-        <View style={ui.row}>
-          {[
-            ["trainer", "Trainer"],
-            ["published", "Published"],
-            ["inverse", "Alternatives"],
-          ].map(([value, label]) => (
-            <Pressable
-              key={value}
-              style={[ui.chip, kind === value && ui.selected]}
-              onPress={() => {
-                setKind(value);
-                setLimit(5);
-              }}
-            >
-              <Text style={ui.badge}>
-                {label} ·{" "}
-                {item.setups?.filter((s) => s.kind === value).length ?? 0}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </ScrollView>
-      {setups.slice(0, limit).map((s) => (
-        <View key={s.id} style={ui.card}>
-          <Text selectable style={[ui.text, { lineHeight: 23 }]}>
-            {s.moves}
-          </Text>
-          <Text style={[ui.badge, { marginTop: 10 }]}>
-            {s.source === "jperm" ? "J Perm" : "SpeedCubeDB"}
-            {s.kind === "inverse" ? " · derived by inverting an algorithm" : ""}
-          </Text>
-        </View>
-      ))}
-      {setups.length > limit && (
-        <Button
-          title={`Show more (${setups.length - limit} remaining)`}
-          onPress={() => setLimit((n) => n + 10)}
+      {settings && (
+        <LearningSettings
+          type={type}
+          cases={casesForType}
+          learned={store.learned}
+          onClose={() => setSettings(false)}
+          onBulk={() => {
+            setBulkLearned(
+              casesForType
+                .filter((c) => store.learned.includes(c.id))
+                .map((c) => c.id),
+            );
+            setSettings(false);
+            setBulk(true);
+          }}
+          update={update}
         />
       )}
     </View>
+  );
+}
+function LearningSettings({
+  type,
+  cases,
+  learned,
+  update,
+  onClose,
+  onBulk,
+}: {
+  type: "OLL" | "PLL";
+  cases: Case[];
+  learned: string[];
+  update: Props["update"];
+  onClose: () => void;
+  onBulk: () => void;
+}) {
+  const [error, setError] = useState("");
+  const twoLook = cases.filter((c) => c.twoLook).map((c) => c.id);
+  const allIds = cases.map((c) => c.id);
+  const allLearned = allIds.every((id) => learned.includes(id));
+  const twoLookLearned = twoLook.every((id) => learned.includes(id));
+  const setGroup = (ids: string[], value: boolean) =>
+    update(
+      (s) => ({
+        ...s,
+        learned: value
+          ? [...new Set([...s.learned, ...ids])]
+          : s.learned.filter((id) => !ids.includes(id)),
+      }),
+      { learning: "setup" },
+    );
+  return (
+    <Sheet title={`${type} learning settings`} onClose={onClose}>
+      <Text style={[ui.subtitle, { marginBottom: 18 }]}>
+        Choose a preset or fine-tune the cases you want to retain in your
+        practice list.
+      </Text>
+      <Button
+        title={twoLookLearned ? "Mark 2-look unlearned" : "Mark 2-look learned"}
+        onPress={() => {
+          if (allLearned && twoLookLearned) {
+            setError(
+              "Mark all cases unlearned first; a complete set cannot have 2-look removed on its own.",
+            );
+            return;
+          }
+          setGroup(twoLook, !twoLookLearned);
+          setError("");
+        }}
+      />
+      <View style={{ height: 12 }} />
+      <Button
+        title={allLearned ? "Mark all unlearned" : "Mark all learned"}
+        onPress={() => {
+          setGroup(allIds, !allLearned);
+          setError("");
+        }}
+      />
+      {error ? (
+        <Text style={[ui.error, { marginTop: 12 }]}>{error}</Text>
+      ) : null}
+      <View style={ui.divider} />
+      <Button title="Select multiple learned" onPress={onBulk} />
+    </Sheet>
   );
 }
 function ContentEditor({
@@ -515,7 +885,12 @@ function ContentEditor({
         from solved to the target case, with yellow on top and green in front.
         Recognition choices use case IDs.
       </Text>
-      <ScrollView horizontal style={{ marginBottom: 20 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        horizontal
+        style={{ marginBottom: 20 }}
+      >
         <View style={ui.row}>
           {store.cases.map((c) => (
             <Pressable

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { DEFAULT_SESSION_NAME } from "../domain/sessions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   AppState,
   ScrollView,
   useWindowDimensions,
@@ -24,37 +25,87 @@ import {
   parseTime,
   resultMs,
 } from "../domain/statistics";
-import { HOLD_MS, inspectionPenalty, TimerPhase } from "../domain/timer/engine";
+import {
+  HOLD_MS,
+  inspectionPenalty,
+  TimerPhase,
+  TimerTouchIntent,
+  timerTouchIntent,
+} from "../domain/timer/engine";
 import {
   generate3x3Scramble,
   getInitial3x3Scramble,
 } from "../domain/scrambles/scrambleService";
-import { executionSetup } from "../domain/content";
+import {
+  executionSetup,
+  identifyCase,
+  knownPracticeSetup,
+} from "../domain/content";
 import { Button, Sheet, Stat } from "./common";
 import { CubeNet } from "./CubePreview";
 import { color, ui } from "./theme";
+import { RecordScroll } from "../domain/achievements";
+import { RecordTicker } from "./Achievements";
 type Props = {
   store: Store;
   update: (fn: (s: Store) => Store) => void;
   training?: Case;
+  dailyDate?: string;
+  caseStats?: boolean;
   onExit: () => void;
   onActive: (v: boolean) => void;
+  onBusy?: (v: boolean) => void;
+  record?: RecordScroll | null;
+  onRecordComplete?: (id: string) => void;
   onSettings: () => void;
+};
+const protectedSessionIds = new Set(["main", "oll-practice", "pll-practice"]);
+const sessionMenuRank: Record<string, number> = {
+  main: 0,
+  "oll-practice": 1,
+  "pll-practice": 2,
 };
 export function Timer({
   store,
   update,
   training,
+  dailyDate,
+  caseStats,
   onExit,
   onActive,
+  onBusy,
+  record,
+  onRecordComplete,
   onSettings,
 }: Props) {
   const { height: windowHeight } = useWindowDimensions();
-  const panelHeight = windowHeight < 750 ? 128 : 148;
+  const [viewport, setViewport] = useState({
+    width: 390,
+    height: windowHeight - 140,
+  });
+  const landscape = viewport.width > viewport.height * 1.35;
+  const panelHeight = Math.min(180, Math.max(100, viewport.height * 0.23));
   const [cubeWidth, setCubeWidth] = useState(180);
   const session =
-    store.sessions.find((s) => s.id === store.activeSessionId) ??
-    store.sessions[0];
+    store.sessions.find(
+      (s) =>
+        s.id ===
+        (training
+          ? `${training.type.toLowerCase()}-practice`
+          : store.activeSessionId),
+    ) ?? store.sessions[0];
+  const practiceType = training
+    ? null
+    : session.id === "oll-practice"
+      ? "OLL"
+      : session.id === "pll-practice"
+        ? "PLL"
+        : null;
+  const sessionsForMenu = [...store.sessions].sort((a, b) => {
+    const rankDifference =
+      (sessionMenuRank[a.id] ?? 3) - (sessionMenuRank[b.id] ?? 3);
+    return rankDifference || a.name.localeCompare(b.name);
+  });
   const [phase, setPhase] = useState<TimerPhase>("idle");
   const phaseRef = useRef<TimerPhase>("idle");
   const setTimerPhase = (p: TimerPhase) => {
@@ -63,9 +114,14 @@ export function Timer({
   };
   const [elapsed, setElapsed] = useState(0),
     [inspection, setInspection] = useState(0);
-  const [scramble, setScramble] = useState(() =>
-    training ? executionSetup(training) : getInitial3x3Scramble(),
-  );
+  const [scramble, setScramble] = useState(() => {
+    if (training) return executionSetup(training);
+    return (
+      (practiceType &&
+        knownPracticeSetup(store.cases, store.learned, practiceType)) ||
+      getInitial3x3Scramble()
+    );
+  });
   const [error, setError] = useState("");
   const [sheet, setSheet] = useState<
     | "sessions"
@@ -92,17 +148,34 @@ export function Timer({
   const startAt = useRef(0),
     inspectionAt = useRef(0),
     holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readyHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const inspectionActive = useRef(false),
     penalty = useRef<Penalty>("none"),
     warning = useRef(0),
     suppressRelease = useRef(false);
   const currentScramble = useRef(scramble);
   currentScramble.current = scramble;
-  const solves = training
-    ? store.attempts.filter(
-        (a) => a.caseId === training.id && a.mode === "execution",
-      )
-    : session.solves;
+  const dailyStart = dailyDate
+    ? new Date(`${dailyDate}T00:00:00`).getTime()
+    : null;
+  const dailyEnd =
+    dailyStart === null
+      ? null
+      : new Date(
+          new Date(dailyStart).setDate(new Date(dailyStart).getDate() + 1),
+        ).getTime();
+  const solves =
+    training && (caseStats || dailyStart !== null)
+      ? store.attempts.filter(
+          (attempt) =>
+            attempt.caseId === training.id &&
+            attempt.mode === "execution" &&
+            (dailyStart === null ||
+              dailyEnd === null ||
+              (attempt.createdAt >= dailyStart &&
+                attempt.createdAt < dailyEnd)),
+        )
+      : session.solves;
   const ao5 = ao5Summary(solves, !training && !!session.hasAo5);
   const last = solves[0];
   const cue = useCallback(() => {
@@ -112,33 +185,63 @@ export function Timer({
       );
   }, [store.preferences.haptics]);
   const nextScramble = () => {
-    try {
-      setScramble(
-        training
-          ? executionSetup(training, currentScramble.current)
-          : generate3x3Scramble(),
-      );
-      setError("");
-    } catch {
-      setError("Scramble generation failed. Try New scramble.");
-    }
+    const next = training
+      ? executionSetup(training, currentScramble.current)
+      : practiceType
+        ? (knownPracticeSetup(
+            store.cases,
+            store.learned,
+            practiceType,
+            currentScramble.current,
+          ) ?? generate3x3Scramble())
+        : generate3x3Scramble();
+    currentScramble.current = next;
+    setScramble(next);
+    if (store.preferences.haptics) Haptics.selectionAsync().catch(() => {});
+    setError("");
   };
   useEffect(() => {
     onActive(phase === "running");
   }, [phase]);
-  useEffect(
-    () => () => {
+  const busy = phase !== "idle" && phase !== "result";
+  useEffect(() => {
+    onBusy?.(busy);
+    if (
+      (phase === "running" || phase === "inspection") &&
+      record &&
+      onRecordComplete
+    )
+      onRecordComplete(record.id);
+  }, [phase, busy, record?.id, onBusy, onRecordComplete]);
+  useEffect(() => {
+    return () => {
       if (holdTimer.current) clearTimeout(holdTimer.current);
+      readyHapticTimers.current.forEach(clearTimeout);
       onActive(false);
-    },
-    [],
-  );
+      onBusy?.(false);
+    };
+  }, []);
   const cancelHold = () => {
     if (holdTimer.current) clearTimeout(holdTimer.current);
     holdTimer.current = null;
   };
+  const cancelReadyHaptic = () => {
+    readyHapticTimers.current.forEach(clearTimeout);
+    readyHapticTimers.current = [];
+  };
+  const readyHaptic = () => {
+    cancelReadyHaptic();
+    if (!store.preferences.haptics) return;
+    [0, 45, 90].forEach((delay) => {
+      const timer = setTimeout(() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }, delay);
+      readyHapticTimers.current.push(timer);
+    });
+  };
   const reset = () => {
     cancelHold();
+    cancelReadyHaptic();
     inspectionActive.current = false;
     setTimerPhase("idle");
     setElapsed(0);
@@ -180,13 +283,28 @@ export function Timer({
   }, [phase, cue]);
   const save = (solve: Solve) => {
     update((s) => {
-      if (training) {
+      const caseId =
+        training?.id ??
+        (practiceType ? identifyCase(solve.scramble, practiceType)?.id : null);
+      if (caseId) {
         const attempt: Attempt = {
           ...solve,
-          caseId: training.id,
+          caseId,
           mode: "execution",
         };
-        return { ...s, attempts: [attempt, ...s.attempts] };
+        return {
+          ...s,
+          attempts: [attempt, ...s.attempts],
+          sessions: s.sessions.map((x) =>
+            x.id === session.id
+              ? {
+                  ...x,
+                  hasAo5: x.hasAo5 || x.solves.length >= 4,
+                  solves: [solve, ...x.solves],
+                }
+              : x,
+          ),
+        };
       }
       return {
         ...s,
@@ -225,11 +343,12 @@ export function Timer({
     setTimerPhase("holding");
     holdTimer.current = setTimeout(() => {
       setTimerPhase("ready");
-      if (store.preferences.haptics) Haptics.selectionAsync().catch(() => {});
+      readyHaptic();
     }, HOLD_MS);
   };
   const release = () => {
     cancelHold();
+    cancelReadyHaptic();
     if (suppressRelease.current) {
       suppressRelease.current = false;
       return;
@@ -280,36 +399,60 @@ export function Timer({
     );
     if (inspectionActive.current) return;
     if (Math.abs(x) > Math.abs(y)) {
-      if (x < 0) nextScramble();
-      else if (last) {
-        setDeleteTarget({
-          kind: "solve",
-          id: last.id,
-          name: formatTime(resultMs(last)),
-        });
-        setSheet("delete");
-      }
+      if (x < 0 && last) {
+        Alert.alert(
+          "Delete solve?",
+          `Remove ${formatTime(resultMs(last))} from this session?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => {
+                update((s) => ({
+                  ...s,
+                  attempts: s.attempts.filter((a) => a.id !== last.id),
+                  sessions: s.sessions.map((sessionItem) =>
+                    sessionItem.id === session.id
+                      ? {
+                          ...sessionItem,
+                          solves: sessionItem.solves.filter(
+                            (solve) => solve.id !== last.id,
+                          ),
+                        }
+                      : sessionItem,
+                  ),
+                }));
+                reset();
+              },
+            },
+          ],
+        );
+      } else if (x > 0) nextScramble();
     } else if (y > 0) openEntry();
     else if (last) {
       setAllowEdit(true);
       openActions(last);
     }
   };
-  // A single gesture owns hold + swipe, so a swipe can never also start a solve.
-  const moved = useRef(false),
+  // Early swipes own the contact; after 150 ms, movement cannot interrupt a hold.
+  const touchIntent = useRef<TimerTouchIntent>("pending"),
+    touchStartedAt = useRef(0),
     origin = useRef({ x: 0, y: 0 });
   const touch = Gesture.Manual()
     .runOnJS(true)
     .onTouchesMove((e) => {
       const t = e.changedTouches[0];
-      if (
-        t &&
+      if (!t) return;
+      touchIntent.current = timerTouchIntent(
+        touchIntent.current,
+        performance.now() - touchStartedAt.current,
         Math.hypot(
           t.absoluteX - origin.current.x,
           t.absoluteY - origin.current.y,
-        ) > 28
-      ) {
-        moved.current = true;
+        ),
+      );
+      if (touchIntent.current === "swipe") {
         cancelHold();
         if (phaseRef.current === "holding" || phaseRef.current === "ready")
           setTimerPhase(
@@ -324,7 +467,7 @@ export function Timer({
         manager.end();
         return;
       }
-      if (moved.current && t)
+      if (touchIntent.current === "swipe" && t)
         swipe(t.absoluteX - origin.current.x, t.absoluteY - origin.current.y);
       else release();
       manager.end();
@@ -341,34 +484,29 @@ export function Timer({
   touch.onTouchesDown((e, manager) => {
     const t = e.changedTouches[0];
     if (t) origin.current = { x: t.absoluteX, y: t.absoluteY };
-    moved.current = false;
+    touchIntent.current = "pending";
+    touchStartedAt.current = performance.now();
     down();
     manager.activate();
   });
   const setPenalty = (p: Penalty) => {
     if (!selectedSolve) return;
-    update((s) =>
-      training
-        ? {
-            ...s,
-            attempts: s.attempts.map((a) =>
-              a.id === selectedSolve.id ? { ...a, penalty: p } : a,
-            ),
-          }
-        : {
-            ...s,
-            sessions: s.sessions.map((x) =>
-              x.id === session.id
-                ? {
-                    ...x,
-                    solves: x.solves.map((a) =>
-                      a.id === selectedSolve.id ? { ...a, penalty: p } : a,
-                    ),
-                  }
-                : x,
-            ),
-          },
-    );
+    update((s) => ({
+      ...s,
+      attempts: s.attempts.map((a) =>
+        a.id === selectedSolve.id ? { ...a, penalty: p } : a,
+      ),
+      sessions: s.sessions.map((x) =>
+        x.id === session.id
+          ? {
+              ...x,
+              solves: x.solves.map((a) =>
+                a.id === selectedSolve.id ? { ...a, penalty: p } : a,
+              ),
+            }
+          : x,
+      ),
+    }));
     setSheet(null);
   };
   const saveEntry = () => {
@@ -378,28 +516,22 @@ export function Timer({
       return;
     }
     if (editSolve)
-      update((s) =>
-        training
-          ? {
-              ...s,
-              attempts: s.attempts.map((a) =>
-                a.id === editSolve ? { ...a, timeMs: ms } : a,
-              ),
-            }
-          : {
-              ...s,
-              sessions: s.sessions.map((x) =>
-                x.id === session.id
-                  ? {
-                      ...x,
-                      solves: x.solves.map((a) =>
-                        a.id === editSolve ? { ...a, timeMs: ms } : a,
-                      ),
-                    }
-                  : x,
-              ),
-            },
-      );
+      update((s) => ({
+        ...s,
+        attempts: s.attempts.map((a) =>
+          a.id === editSolve ? { ...a, timeMs: ms } : a,
+        ),
+        sessions: s.sessions.map((x) =>
+          x.id === session.id
+            ? {
+                ...x,
+                solves: x.solves.map((a) =>
+                  a.id === editSolve ? { ...a, timeMs: ms } : a,
+                ),
+              }
+            : x,
+        ),
+      }));
     else {
       save({
         id: uid(),
@@ -427,7 +559,11 @@ export function Timer({
   const showInspection = inspectionActive.current && phase !== "running";
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1 }} pointerEvents="box-none">
+      <View
+        style={{ flex: 1 }}
+        pointerEvents="box-none"
+        onLayout={(e) => setViewport(e.nativeEvent.layout)}
+      >
         <GestureDetector gesture={touch}>
           <View
             accessibilityLabel="Timer control: hold and release to start, tap to stop"
@@ -471,15 +607,26 @@ export function Timer({
               accessibilityRole="button"
               accessibilityLabel="View scrambled cube"
               onPress={() => setSheet("cube")}
-              style={styles.scramble}
+              style={[
+                styles.scramble,
+                landscape && { width: "58%", marginHorizontal: 12, padding: 4 },
+              ]}
             >
               <Text style={ui.label}>
-                {training ? `${training.type} Trainer` : "RANDOM STATE"}
+                {training
+                  ? `${training.type} Trainer`
+                  : practiceType
+                    ? `${practiceType} PRACTICE`
+                    : "RANDOM STATE"}
               </Text>
               <Text
                 style={[
                   ui.text,
-                  { fontSize: 18, lineHeight: 29, textAlign: "center" },
+                  {
+                    fontSize: viewport.height < 550 ? 14 : 18,
+                    lineHeight: viewport.height < 550 ? 22 : 29,
+                    textAlign: "center",
+                  },
                 ]}
               >
                 {scramble}
@@ -487,8 +634,35 @@ export function Timer({
             </Pressable>
           </>
         )}
-        <View pointerEvents="none" style={styles.clockZone}>
-          <Text style={[styles.clock, { color: clockColor }]}>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.clockZone,
+            !isImmersed &&
+              (landscape
+                ? { right: "40%", top: 110 }
+                : {
+                    top: viewport.height < 550 ? 155 : 180,
+                    bottom: panelHeight + 32,
+                  }),
+          ]}
+        >
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.4}
+            style={[
+              styles.clock,
+              {
+                color: clockColor,
+                maxWidth: "94%",
+                fontSize: Math.min(
+                  110,
+                  viewport.width * (landscape ? 0.11 : 0.2),
+                ),
+              },
+            ]}
+          >
             {showInspection
               ? inspection >= 17000
                 ? "DNF"
@@ -512,7 +686,41 @@ export function Timer({
           )}
         </View>
         {!isImmersed && (
-          <View pointerEvents="box-none" style={styles.previewRow}>
+          <View
+            pointerEvents="box-none"
+            style={[
+              styles.previewRow,
+              landscape && {
+                left: "63%",
+                top: 64,
+                bottom: 16,
+                flexDirection: "column",
+                justifyContent: "center",
+              },
+            ]}
+          >
+            <View
+              pointerEvents="none"
+              style={
+                landscape
+                  ? { height: 44, width: "100%" }
+                  : {
+                      position: "absolute",
+                      bottom: "100%",
+                      left: 0,
+                      right: 0,
+                      marginBottom: 8,
+                    }
+              }
+            >
+              {record?.sessionId === session.id && onRecordComplete && (
+                <RecordTicker
+                  key={record.id}
+                  record={record}
+                  onComplete={onRecordComplete}
+                />
+              )}
+            </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Expand cube state"
@@ -521,7 +729,7 @@ export function Timer({
               style={[
                 styles.previewPanel,
                 {
-                  flex: 3,
+                  flex: landscape ? undefined : 3,
                   height: panelHeight,
                   alignItems: "center",
                   justifyContent: "center",
@@ -530,7 +738,7 @@ export function Timer({
             >
               <CubeNet
                 notation={scramble}
-                whiteTop={!training}
+                whiteTop={!training && !practiceType}
                 size={Math.min(
                   180,
                   (cubeWidth - 20) * 0.82,
@@ -544,7 +752,11 @@ export function Timer({
               onPress={() => setSheet("stats")}
               style={[
                 styles.previewPanel,
-                { flex: 2, height: panelHeight, padding: 8 },
+                {
+                  flex: landscape ? undefined : 2,
+                  height: panelHeight,
+                  padding: 8,
+                },
               ]}
             >
               <View style={styles.compactStats}>
@@ -587,9 +799,14 @@ export function Timer({
           title={training ? training.name : "Scrambled cube"}
           onClose={() => setSheet(null)}
         >
-          <CubeNet notation={scramble} whiteTop={!training} />
+          <CubeNet
+            notation={scramble}
+            whiteTop={!training && !practiceType}
+            size={Math.min(290, viewport.width - 64)}
+          />
           <Text style={[ui.subtitle, { textAlign: "center" }]}>
-            {training ? "Yellow" : "White"} on top · green in front
+            {training || practiceType ? "Yellow" : "White"} on top · green in
+            front
           </Text>
           <Button title="New scramble" onPress={nextScramble} />
         </Sheet>
@@ -608,11 +825,24 @@ export function Timer({
           <View style={styles.sessionMenu}>
             <Text style={[ui.label, { marginBottom: 14 }]}>SESSIONS</Text>
             <ScrollView
-              style={{ maxHeight: 280 }}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              style={{ height: 210 }}
+              contentContainerStyle={{ gap: 10, paddingBottom: 14 }}
               keyboardShouldPersistTaps="handled"
             >
-              {store.sessions.map((s) => (
-                <View key={s.id} style={[ui.between, ui.card]}>
+              {sessionsForMenu.map((s) => (
+                <View
+                  key={s.id}
+                  style={[
+                    ui.between,
+                    ui.card,
+                    {
+                      marginBottom: 0,
+                      paddingVertical: 6,
+                    },
+                  ]}
+                >
                   <Pressable
                     style={{ flex: 1 }}
                     onPress={() => {
@@ -621,7 +851,7 @@ export function Timer({
                       setSheet(null);
                     }}
                   >
-                    <Text style={ui.text}>
+                    <Text numberOfLines={2} style={ui.text}>
                       {s.name}
                       {s.id === session.id ? " ✓" : ""}
                     </Text>
@@ -629,27 +859,31 @@ export function Timer({
                       {s.solves.length} solves · 3×3
                     </Text>
                   </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setName(s.name);
-                      setEditId(s.id);
-                      setSheet("session-edit");
-                    }}
-                  >
-                    <Text style={ui.badge}>Rename</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setDeleteTarget({
-                        kind: "session",
-                        id: s.id,
-                        name: s.name,
-                      });
-                      setSheet("delete");
-                    }}
-                  >
-                    <Text style={ui.error}>Delete</Text>
-                  </Pressable>
+                  {!protectedSessionIds.has(s.id) && (
+                    <>
+                      <Pressable
+                        onPress={() => {
+                          setName(s.name);
+                          setEditId(s.id);
+                          setSheet("session-edit");
+                        }}
+                      >
+                        <Text style={ui.badge}>Rename</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setDeleteTarget({
+                            kind: "session",
+                            id: s.id,
+                            name: s.name,
+                          });
+                          setSheet("delete");
+                        }}
+                      >
+                        <Text style={ui.error}>Delete</Text>
+                      </Pressable>
+                    </>
+                  )}
                 </View>
               ))}
             </ScrollView>
@@ -681,14 +915,13 @@ export function Timer({
           <View style={ui.card}>
             <Text style={ui.text}>3×3 Cube ✓</Text>
           </View>
-          <Text style={ui.label}>SESSION NAME</Text>
+          <Text style={[ui.label, { marginBottom: 0 }]}>SESSION NAME</Text>
           <TextInput
             placeholderTextColor={color.muted}
             keyboardAppearance="dark"
             style={ui.input}
             value={name}
             onChangeText={setName}
-            placeholder="Competition practice"
             maxLength={50}
           />
           <Button
@@ -696,7 +929,7 @@ export function Timer({
             disabled={!name.trim()}
             onPress={() => {
               update((s) => {
-                if (editId)
+                if (editId && !protectedSessionIds.has(editId))
                   return {
                     ...s,
                     sessions: s.sessions.map((x) =>
@@ -708,7 +941,13 @@ export function Timer({
                   ...s,
                   sessions: [
                     ...s.sessions,
-                    { id, name: name.trim(), solves: [] },
+                    {
+                      id,
+                      name: name.trim(),
+                      solves: [],
+                      createdAt: Date.now(),
+                      event: "333",
+                    },
                   ],
                   activeSessionId: id,
                 };
@@ -873,26 +1112,23 @@ export function Timer({
             onPress={() => {
               update((s) => {
                 if (deleteTarget.kind === "solve")
-                  return training
-                    ? {
-                        ...s,
-                        attempts: s.attempts.filter(
-                          (a) => a.id !== deleteTarget.id,
-                        ),
-                      }
-                    : {
-                        ...s,
-                        sessions: s.sessions.map((x) =>
-                          x.id === session.id
-                            ? {
-                                ...x,
-                                solves: x.solves.filter(
-                                  (a) => a.id !== deleteTarget.id,
-                                ),
-                              }
-                            : x,
-                        ),
-                      };
+                  return {
+                    ...s,
+                    attempts: s.attempts.filter(
+                      (a) => a.id !== deleteTarget.id,
+                    ),
+                    sessions: s.sessions.map((x) =>
+                      x.id === session.id
+                        ? {
+                            ...x,
+                            solves: x.solves.filter(
+                              (a) => a.id !== deleteTarget.id,
+                            ),
+                          }
+                        : x,
+                    ),
+                  };
+                if (protectedSessionIds.has(deleteTarget.id)) return s;
                 let sessions = s.sessions.filter(
                   (x) => x.id !== deleteTarget.id,
                 );
@@ -1006,7 +1242,7 @@ const styles = StyleSheet.create({
   },
   scramble: { marginHorizontal: 24, padding: 12, alignItems: "center" },
   clockZone: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },
