@@ -7,7 +7,12 @@
     "scheme": "cubeio",
     "orientation": "default",
     "userInterfaceStyle": "dark",
-    "plugins": ["expo-router", "expo-sqlite", "expo-font", "expo-status-bar"],
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-font",
+      "expo-status-bar"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sethchun.cubeio",
@@ -17,14 +22,23 @@
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight",
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
         ],
         "UISupportedInterfaceOrientations~ipad": [
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight",
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "backgroundColor": "#0c1420",
@@ -32,7 +46,10 @@
       "output": "single"
     },
     "extra": {
-      "supportedApplePlatforms": ["iOS", "iPadOS"],
+      "supportedApplePlatforms": [
+        "iOS",
+        "iPadOS"
+      ],
       "router": {
         "asyncRoutes": {
           "web": true
