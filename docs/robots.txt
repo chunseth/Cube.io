@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://chunseth.github.io/Cube.io/sitemap.xml

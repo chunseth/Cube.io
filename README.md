@@ -30,6 +30,16 @@ Use Expo Go on iPhone, or an iOS simulator, for native interaction testing. The 
 
 The app is linked to [@esht/cube-io](https://expo.dev/accounts/esht/projects/cube-io). `eas.json` includes development, preview, and production profiles, plus separate iOS simulator profiles. Use `npm run build:ios` for an App Store/TestFlight build, `npm run build:ios:preview` for a registered device preview, or `npm run build:ios:simulator` for a standalone simulator build. See [EAS setup and signing](docs/eas-build.md) for all commands and first-build requirements.
 
+## App listing website
+
+GitHub Pages publishes the static website from the `docs/` folder on `main`:
+
+- Marketing URL: https://chunseth.github.io/Cube.io/
+- Support URL: https://chunseth.github.io/Cube.io/support.html
+- Privacy policy URL: https://chunseth.github.io/Cube.io/privacy.html
+
+The site uses plain HTML and CSS with local assets and no build step. Keep GitHub **Settings → Pages → Deploy from a branch** set to **main /docs**. Push changes to `main` to publish them. Support requests go to this repository's GitHub Issues.
+
 ## Implemented
 
 - Four working tabs: Timer, Train, Algorithms, Progress.
