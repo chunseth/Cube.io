@@ -1,9 +1,19 @@
 import { useResponsiveLayout } from "./responsive";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { ComponentRef, useEffect, useRef, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Case, Store, uid } from "../domain/models";
 import { executionSetup } from "../domain/content";
-import { recognitionAnswers, recognitionCases } from "../domain/recognition";
+import {
+  recognitionAnswers,
+  recognitionCases,
+  RecognitionScope,
+} from "../domain/recognition";
 import { formatTime } from "../domain/statistics";
 import {
   CaseImage,
@@ -30,7 +40,7 @@ export function Recognition({
   onExit,
 }: {
   item: Case;
-  scope?: "single" | "family" | "type";
+  scope?: RecognitionScope;
   initialMode?: "full" | "two-sided";
   store: Store;
   update: (fn: (s: Store) => Store) => void;
@@ -41,12 +51,15 @@ export function Recognition({
   const [availableHeight, setAvailableHeight] = useState(height - 80);
   const eligible = () =>
     recognitionCases(store.cases, store.learned, initialItem, scope);
-  const [currentId, setCurrentId] = useState(initialItem.id);
-  const [scramble, setScramble] = useState(() => executionSetup(initialItem));
+  const [firstItem] = useState(() =>
+    scope === "similar" ? (shuffled(eligible())[0] ?? initialItem) : initialItem,
+  );
+  const [currentId, setCurrentId] = useState(firstItem.id);
+  const [scramble, setScramble] = useState(() => executionSetup(firstItem));
   const [queue, setQueue] = useState(() =>
     shuffled(
       eligible()
-        .filter((c) => c.id !== initialItem.id)
+        .filter((c) => c.id !== firstItem.id)
         .map((c) => c.id),
     ),
   );
@@ -56,12 +69,13 @@ export function Recognition({
     [time, setTime] = useState(0),
     [round, setRound] = useState(0);
   const start = useRef(0);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useEffect(() => {
     start.current = performance.now();
   }, [round]);
   const correct = answer === item.id;
   const [order, setOrder] = useState(() =>
-    shuffled(recognitionAnswers(initialItem, scramble, mode)),
+    shuffled(recognitionAnswers(firstItem, scramble, mode)),
   );
   const nextQuestion = () => {
     const ready = eligible();
@@ -79,6 +93,7 @@ export function Recognition({
     setOrder(shuffled(recognitionAnswers(next, nextScramble, mode)));
     setAnswer(null);
     setRound((r) => r + 1);
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
   };
   // Reserve feedback and continuation space before an answer is selected.
   const columns = availableHeight < 450 && layout.width > 500 ? 4 : 2;
@@ -89,11 +104,11 @@ export function Recognition({
     (contentWidth - (columns - 1) * 10) / columns,
   );
   const imageSize = Math.max(
-    16,
+    64,
     Math.min(112, cellWidth - 24, (availableHeight - 192) / (rows + 2.2) - 36),
   );
   const cubeSize = Math.max(
-    32,
+    120,
     Math.min(
       252,
       contentWidth,
@@ -118,7 +133,15 @@ export function Recognition({
       >
         <BackButton onPress={onExit} />
       </View>
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <ScrollView
+        ref={scrollRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
         {mode === "full" ? (
           <View
             style={{ alignItems: "center", marginTop: 48, marginBottom: 4 }}
@@ -239,31 +262,22 @@ export function Recognition({
               </Pressable>
             ))}
         </View>
-      </View>
+      </ScrollView>
       <View
         style={{ height: 44, justifyContent: "center", alignItems: "center" }}
       >
         {answer && (
-          <Text style={[ui.subtitle, { color: color.accent }]}>
-            Tap anywhere to continue ...
-          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={nextQuestion}
+            hitSlop={10}
+          >
+            <Text style={[ui.subtitle, { color: color.accent }]}>
+              Tap to continue ...
+            </Text>
+          </Pressable>
         )}
       </View>
-      {answer && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tap anywhere to continue"
-          onPress={nextQuestion}
-          style={{
-            position: "absolute",
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: 2,
-          }}
-        />
-      )}
     </View>
   );
 }

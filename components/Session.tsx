@@ -36,7 +36,8 @@ export function SessionScreen({
   update: (fn: (s: Store) => Store) => void;
 }) {
   const layout = useResponsiveLayout();
-  const solveColumns = layout.width >= 1000 ? 6 : layout.wide ? 5 : 3;
+  const solveColumns =
+    layout.width >= 1000 ? 6 : layout.wide ? 5 : layout.width < 390 ? 2 : 3;
   const solveTileWidth =
     (layout.width - layout.padding * 2 - (solveColumns - 1) * 8) / solveColumns;
   const session =

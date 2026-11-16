@@ -82,6 +82,14 @@ The first two distractors are the nearest measured matches. A third slot can inc
 
 The author review lists the selected lookalikes for every case, all 20 ranked alternatives for every angle, and color-aligned candidate cubes so the comparison can be inspected. Candidate cyclic recoloring in the audit is equivalent to a valid initial U alignment; it does not change the PLL case. The numerical distance and confusion anchors are reproducible design choices, not a user-tested error-rate or difficulty model.
 
+## Daily recognition groups
+
+Every OLL and PLL has a daily recognition group: the case itself plus the distinct lookalikes selected across all four of its verified U-angle quizzes. Groups overlap and stay anchored to the daily case throughout a session. OLL groups contain 4–9 cases selected by edge shape, oriented-corner count, and sticker similarity; PLL groups contain 4–12 cases selected by visible bars, headlights, blocks, and color relationships.
+
+Daily recognition quizzes draw questions from this entire group, including cases not yet marked learned. The first question is random, and a shuffled deck visits every group member before refilling, without repeating the last case immediately. Each question retains its own verified, angle-specific answer choices, and attempts are saved against the case actually shown. Daily execution continues to practice only the daily case; general recognition modes continue to use their learned-case pools.
+
+For example, OLL 1 is quizzed alongside OLL 2, 3, and 4; OLL 20 alongside OLL 17, 18, and 19. Ua's group includes Ub and Z, and Ra's group includes F, together with their other angle-specific lookalikes. These groups are derived directly from the bundled quiz banks so rebuilding their lookalikes also updates daily question pools.
+
 ## Rebuild and verify
 
 Run `npm run catalog:build` to regenerate the bundled records, verification report, vector assets, and atlas from the checked-in source snapshots. Run `npm test` and `npm run typecheck` afterward. Tests cover every setup at all four U alignments, independent source sticker patterns, algorithms, imports, migration, and diagram indexing.

@@ -32,6 +32,7 @@ import {
   AchievementProvider,
 } from "../components/Achievements";
 import { recognitionReady } from "../domain/content";
+import { RecognitionScope } from "../domain/recognition";
 import { formatTime, best } from "../domain/statistics";
 import { SessionScreen } from "../components/Session";
 import { Timer } from "../components/Timer";
@@ -63,7 +64,7 @@ export default function App() {
   const [training, setTraining] = useState<{
       item: Case;
       mode: "execution" | "recognition";
-      scope?: "single" | "family" | "type";
+      scope?: RecognitionScope;
       recognitionMode?: "full" | "two-sided";
       dailyDate?: string;
       caseStats?: boolean;
@@ -170,7 +171,7 @@ export default function App() {
   const start = (
     item: Case,
     mode: "execution" | "recognition",
-    scope: "single" | "family" | "type" = "single",
+    scope: RecognitionScope = "single",
     recognitionMode?: "full" | "two-sided",
     dailyDate?: string,
     caseStats?: boolean,
@@ -376,9 +377,12 @@ export default function App() {
                   color={tab === t ? color.accent : color.muted}
                 />
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                   style={{
                     fontFamily: "Inter",
-                    fontSize: 10,
+                    fontSize: 11,
+                    maxWidth: "100%",
                     color: tab === t ? color.ink : color.muted,
                   }}
                 >
@@ -427,6 +431,7 @@ export default function App() {
           <Onboarding
             store={store}
             update={update}
+            topInset={insets.top}
             onComplete={() => setExperienceSetup(false)}
           />
         )}
@@ -468,7 +473,7 @@ function Train({
   start: (
     c: Case,
     mode: "execution" | "recognition",
-    scope?: "single" | "family" | "type",
+    scope?: RecognitionScope,
     recognitionMode?: "full" | "two-sided",
     dailyDate?: string,
   ) => void;
@@ -542,20 +547,31 @@ function Train({
         <View style={{ height: 12 }} />
         <Button
           title={
-            detail.type === "OLL"
-              ? "Practice family recognition"
-              : "Practice 2-face recognition"
+            dailyDetail?.id === detail.id
+              ? "Practice mixed recognition"
+              : detail.type === "OLL"
+                ? "Practice family recognition"
+                : "Practice 2-face recognition"
           }
           disabled={!recognitionReady(detail, store.cases)}
           onPress={() =>
             start(
               detail,
               "recognition",
-              detail.type === "OLL" ? "family" : "single",
+              dailyDetail?.id === detail.id
+                ? "similar"
+                : detail.type === "OLL"
+                  ? "family"
+                  : "single",
               "two-sided",
             )
           }
         />
+        {dailyDetail?.id === detail.id && (
+          <Text style={[ui.subtitle, { marginTop: 8 }]}>
+            Quiz today's case alongside similar patterns.
+          </Text>
+        )}
       </ScrollView>
     );
   if (practiceType)
@@ -800,40 +816,94 @@ function Train({
 function Onboarding({
   store,
   update,
+  topInset,
   onComplete,
 }: {
   store: Store;
   update: UpdateStore;
+  topInset: number;
   onComplete: () => void;
 }) {
   const layout = useResponsiveLayout();
-  const [step, setStep] = useState(0),
-    [known, setKnown] = useState(store.learned);
+  type StartingLevel = "starting" | "two-look" | "full";
+  const initialLevel = (type: "OLL" | "PLL"): StartingLevel => {
+    const group = store.cases.filter((c) => c.type === type);
+    const known = new Set(store.learned);
+    if (group.length > 0 && group.every((c) => known.has(c.id))) return "full";
+    if (group.filter((c) => c.twoLook).every((c) => known.has(c.id)))
+      return "two-look";
+    return "starting";
+  };
+  const [levels, setLevels] = useState<Record<"OLL" | "PLL", StartingLevel>>({
+    OLL: initialLevel("OLL"),
+    PLL: initialLevel("PLL"),
+  });
   const finish = () => {
+    const known = (["OLL", "PLL"] as const).flatMap((type) => {
+      const level = levels[type];
+      return store.cases
+        .filter(
+          (c) =>
+            c.type === type &&
+            (level === "full" || (level === "two-look" && c.twoLook)),
+        )
+        .map((c) => c.id);
+    });
     update(
       (s) => ({
         ...s,
-        learned: known,
+        learned: [
+          ...s.learned.filter((id) => !store.cases.some((c) => c.id === id)),
+          ...known,
+        ],
         preferences: { ...s.preferences, onboarding: true },
       }),
       { learning: "setup" },
     );
     onComplete();
   };
-  const type = step === 1 ? "OLL" : "PLL";
-  const choose = (level: "none" | "two" | "all") => {
-    const group = store.cases.filter((c) => c.type === type);
-    setKnown((k) => [
-      ...k.filter((id) => !group.some((c) => c.id === id)),
-      ...group
-        .filter((c) => level === "all" || (level === "two" && c.twoLook))
-        .map((c) => c.id),
-    ]);
-    setStep((s) => s + 1);
+  const options: { value: StartingLevel; label: string }[] = [
+    { value: "starting", label: "Just starting" },
+    { value: "two-look", label: "2-Look" },
+    { value: "full", label: "Full Set" },
+  ];
+  const renderOption = (
+    type: "OLL" | "PLL",
+    option: (typeof options)[number],
+    fullWidth = false,
+  ) => {
+    const selected = levels[type] === option.value;
+    return (
+      <Pressable
+        key={option.value}
+        accessibilityRole="radio"
+        accessibilityState={{ checked: selected }}
+        onPress={() =>
+          setLevels((current) => ({ ...current, [type]: option.value }))
+        }
+        style={[
+          ui.chip,
+          selected && ui.selected,
+          {
+            flex: fullWidth ? undefined : 1,
+            height: 44,
+            minHeight: 44,
+            paddingVertical: 0,
+            paddingHorizontal: 8,
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        ]}
+      >
+        <Text numberOfLines={1} style={ui.buttonText}>
+          {option.label}
+        </Text>
+      </Pressable>
+    );
   };
   return (
     <Modal animationType="fade">
-      <SafeAreaView style={{ flex: 1, backgroundColor: color.bg }}>
+      <View style={{ flex: 1, backgroundColor: color.bg }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
@@ -841,7 +911,7 @@ function Onboarding({
             ui.page,
             layout.page,
             {
-              paddingTop: layout.wide ? 60 : 28,
+              paddingTop: Math.max(layout.wide ? 60 : 28, topInset + 28),
               maxWidth: 760,
               width: "100%",
               alignSelf: "center",
@@ -852,166 +922,31 @@ function Onboarding({
           <Text
             style={[ui.title, { fontSize: 36, lineHeight: 44, marginTop: 20 }]}
           >
-            {step === 0
-              ? "Solve. Train.\nFind your flow."
-              : step < 3
-                ? `Where are you\nwith ${type}?`
-                : "Make it yours."}
+            Set your OLL & PLL starting point
           </Text>
           <Text style={[ui.subtitle, { marginVertical: 24 }]}>
-            {step === 0
-              ? "A focused timer and last-layer trainer for your next personal best. Everything stays on your device."
-              : step < 3
-                ? "Start with a familiar set. You can adjust individual cases next."
-                : "Confirm the cases you know. You can change these in Algorithms anytime."}
+            We’ll use your answers to tailor the cases you see in Train and show
+            your progress in Algorithms. You can change what you’ve learned at
+            any time.
           </Text>
-          {step === 0 ? (
-            <Button title="Let’s get started" onPress={() => setStep(1)} />
-          ) : step < 3 ? (
-            <View style={{ gap: 12 }}>
-              <Button
-                title="I’m just starting"
-                onPress={() => choose("none")}
-              />
-              <Button title="I know 2-look" onPress={() => choose("two")} />
-              <Button
-                title="I’m learning the full set"
-                onPress={() => choose("two")}
-              />
-              <Button
-                title={`I know full ${type}`}
-                onPress={() => choose("all")}
-              />
+          {(["OLL", "PLL"] as const).map((type) => (
+            <View key={type} style={[ui.card, { marginBottom: 14 }]}>
+              <Text style={[ui.title, { fontSize: 20, marginBottom: 8 }]}>
+                Where are you with {type}?
+              </Text>
+              <View style={{ gap: 10 }}>
+                {renderOption(type, options[0], true)}
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  {renderOption(type, options[1])}
+                  {renderOption(type, options[2])}
+                </View>
+              </View>
             </View>
-          ) : (
-            <>
-              <Button title="Start practicing" onPress={finish} />
-              <View style={{ height: 20 }} />
-              <KnownCasePicker
-                cases={store.cases}
-                known={known}
-                setKnown={setKnown}
-              />
-              <View style={{ height: 24 }} />
-              <Button title="Start practicing" onPress={finish} />
-            </>
-          )}
-          <Pressable
-            style={{ padding: 24, alignItems: "center" }}
-            onPress={() => {
-              update((s) => ({
-                ...s,
-                preferences: { ...s.preferences, onboarding: true },
-              }));
-              onComplete();
-            }}
-          >
-            <Text style={ui.badge}>Set up later</Text>
-          </Pressable>
+          ))}
+          <Button title="Done" onPress={finish} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
-function KnownCasePicker({
-  cases,
-  known,
-  setKnown,
-}: {
-  cases: Case[];
-  known: string[];
-  setKnown: React.Dispatch<React.SetStateAction<string[]>>;
-}) {
-  const layout = useResponsiveLayout();
-  const [type, setType] = useState<"OLL" | "PLL">("OLL"),
-    [family, setFamily] = useState("All");
-  const families = [
-    ...new Set(cases.filter((c) => c.type === type).map((c) => c.family)),
-  ];
-  const visible = cases.filter(
-    (c) => c.type === type && (family === "All" || c.family === family),
-  );
-  const toggleGroup = () => {
-    const ids = visible.map((c) => c.id);
-    setKnown((k) =>
-      ids.every((id) => k.includes(id))
-        ? k.filter((id) => !ids.includes(id))
-        : [...new Set([...k, ...ids])],
-    );
-  };
-  return (
-    <>
-      <View style={[ui.row, { marginBottom: 14 }]}>
-        {(["OLL", "PLL"] as const).map((t) => (
-          <Pressable
-            key={t}
-            style={[ui.chip, type === t && ui.selected]}
-            onPress={() => {
-              setType(t);
-              setFamily("All");
-            }}
-          >
-            <Text style={ui.text}>{t}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        horizontal
-        style={{ marginBottom: 14 }}
-      >
-        <View style={ui.row}>
-          {["All", ...families].map((f) => (
-            <Pressable
-              key={f}
-              style={[ui.chip, family === f && ui.selected]}
-              onPress={() => setFamily(f)}
-            >
-              <Text style={ui.badge}>{f}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </ScrollView>
-      <View style={[ui.row, { marginBottom: 18 }]}>
-        <Button title="Toggle visible group" onPress={toggleGroup} />
-        <Button
-          title="Clear"
-          onPress={() =>
-            setKnown((k) => k.filter((id) => !visible.some((c) => c.id === id)))
-          }
-        />
-      </View>
-      <View style={ui.grid}>
-        {visible.map((c) => (
-          <Pressable
-            key={c.id}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: known.includes(c.id) }}
-            style={[
-              ui.card,
-              {
-                width: layout.wide ? "30%" : "47%",
-                alignItems: "center",
-                padding: 10,
-              },
-              known.includes(c.id) && ui.selected,
-            ]}
-            onPress={() =>
-              setKnown((k) =>
-                k.includes(c.id) ? k.filter((id) => id !== c.id) : [...k, c.id],
-              )
-            }
-          >
-            {c.setup && <CaseImage setup={c.setup} oll={c.type === "OLL"} />}
-            <Text style={ui.text}>
-              {c.name}
-              {known.includes(c.id) ? " ✓" : ""}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </>
-  );
-}

@@ -11,7 +11,6 @@ import {
   Animated,
   Easing,
   Pressable,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -195,16 +194,14 @@ export function RecordTicker({
           {text}
         </Text>
       ) : (
-        <ScrollView
-          horizontal
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          style={{ flex: 1 }}
-          contentContainerStyle={{ alignItems: "center" }}
-        >
+        <View style={{ flex: 1, overflow: "hidden" }}>
           <Animated.View
             onLayout={(e) => setTextWidth(e.nativeEvent.layout.width)}
-            style={{ transform: [{ translateX: x }] }}
+            style={{
+              alignSelf: "flex-start",
+              flexShrink: 0,
+              transform: [{ translateX: x }],
+            }}
           >
             <Text
               numberOfLines={1}
@@ -213,12 +210,13 @@ export function RecordTicker({
                 fontSize: 32,
                 lineHeight: 40,
                 color: "#ffffff",
+                flexShrink: 0,
               }}
             >
               {text}
             </Text>
           </Animated.View>
-        </ScrollView>
+        </View>
       )}
     </View>
   );

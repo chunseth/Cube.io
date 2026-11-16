@@ -7,12 +7,23 @@ import { pllVisiblePattern } from "./pllRecognition";
 
 export const ollQuizzes = quizzes.cases as OllQuiz[];
 export const pllQuizzes = pllBank.cases;
+export type RecognitionScope = "single" | "family" | "similar" | "type";
+
+// Each case's lookalike group includes its verified choices from every U angle.
+// A peer must also be a possible question, rather than only a wrong answer.
+const similarCaseIds = new Map(
+  [...ollQuizzes, ...pllQuizzes].map((quiz) => [
+    quiz.caseId,
+    new Set([quiz.caseId, ...quiz.views.flatMap((view) => view.answerIds)]),
+  ]),
+);
+
 /** Scope question cases separately from the verified distractors for each view. */
 export function recognitionCases(
   cases: Case[],
   learned: string[],
   item: Case,
-  scope: "single" | "family" | "type",
+  scope: RecognitionScope,
 ): Case[] {
   return cases.filter(
     (c) =>
@@ -20,9 +31,11 @@ export function recognitionCases(
       recognitionReady(c, cases) &&
       (scope === "type"
         ? learned.includes(c.id)
-        : scope === "family"
-          ? c.family === item.family
-          : c.id === item.id),
+        : scope === "similar"
+          ? (similarCaseIds.get(item.id)?.has(c.id) ?? c.id === item.id)
+          : scope === "family"
+            ? c.family === item.family
+            : c.id === item.id),
   );
 }
 
